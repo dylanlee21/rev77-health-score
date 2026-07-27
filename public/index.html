@@ -6,7 +6,6 @@
 <title>REV77 Client Health Score</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
   :root {
     --bg:        #0F1117;
     --surface:   #1A1D27;
@@ -17,175 +16,163 @@
     --text2:     #9DA3C8;
     --text3:     #5C6280;
     --accent:    #4F6EF7;
-    --green:     #22C55E;
-    --green-bg:  #0D2B1A;
-    --green-bd:  #1A5C35;
-    --yellow:    #EAB308;
-    --yellow-bg: #2A2310;
-    --yellow-bd: #5C4A10;
-    --red:       #EF4444;
-    --red-bg:    #2A1010;
-    --red-bd:    #5C2020;
+    --green:     #22C55E; --green-bg: #0D2B1A; --green-bd: #1A5C35;
+    --yellow:    #EAB308; --yellow-bg:#2A2310; --yellow-bd:#5C4A10;
+    --red:       #EF4444; --red-bg:   #2A1010; --red-bd:   #5C2020;
     --radius:    8px;
   }
+  body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; font-size:14px; line-height:1.5; min-height:100vh; }
 
-  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; line-height: 1.5; min-height: 100vh; }
+  /* Header */
+  .header { background:var(--surface); border-bottom:1px solid var(--border); padding:0 2rem; display:flex; align-items:center; justify-content:space-between; height:56px; }
+  .logo { display:flex; align-items:center; gap:10px; }
+  .logo-mark { width:28px; height:28px; background:var(--accent); border-radius:6px; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; color:#fff; }
+  .logo-name { font-weight:600; font-size:15px; }
+  .logo-sub  { font-size:12px; color:var(--text2); margin-left:2px; }
+  .header-right { display:flex; align-items:center; gap:10px; }
+  .period-badge { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius); padding:4px 12px; font-size:12px; color:var(--text2); }
 
-  /* ── Header ── */
-  .header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 2rem; display: flex; align-items: center; justify-content: space-between; height: 56px; }
-  .logo { display: flex; align-items: center; gap: 10px; }
-  .logo-mark { width: 28px; height: 28px; background: var(--accent); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; color: #fff; }
-  .logo-name { font-weight: 600; font-size: 15px; color: var(--text); }
-  .logo-sub  { font-size: 12px; color: var(--text2); margin-left: 2px; }
-  .header-right { display: flex; align-items: center; gap: 12px; }
-  .period-badge { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 4px 12px; font-size: 12px; color: var(--text2); }
+  /* Sync button */
+  .sync-btn { display:flex; align-items:center; gap:6px; background:var(--accent); color:#fff; border:none; border-radius:var(--radius); padding:6px 14px; font-size:12px; font-weight:600; cursor:pointer; transition:opacity .15s; }
+  .sync-btn:hover { opacity:.85; }
+  .sync-btn:disabled { opacity:.5; cursor:not-allowed; }
+  .sync-btn svg { width:13px; height:13px; }
+  .spin { animation:spin 1s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
 
-  /* ── Main layout ── */
-  .main { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+  /* Sync status */
+  .sync-status { font-size:11px; color:var(--text3); }
+  .sync-status.success { color:var(--green); }
+  .sync-status.error   { color:var(--red); }
 
-  /* ── Summary cards ── */
-  .summary-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
-  .summary-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.25rem; }
-  .summary-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
-  .summary-val { font-size: 28px; font-weight: 600; line-height: 1; }
-  .summary-sub { font-size: 12px; color: var(--text2); margin-top: 4px; }
-  .val-green  { color: var(--green); }
-  .val-yellow { color: var(--yellow); }
-  .val-red    { color: var(--red); }
-  .val-white  { color: var(--text); }
+  /* Main */
+  .main { max-width:1300px; margin:0 auto; padding:2rem; }
 
-  /* ── Table ── */
-  .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
-  .table-header { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); }
-  .table-title { font-weight: 600; font-size: 14px; }
-  .table-hint  { font-size: 12px; color: var(--text3); }
+  /* Summary */
+  .summary-row { display:grid; grid-template-columns:repeat(4,1fr); gap:1rem; margin-bottom:1.5rem; }
+  .summary-card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:1rem 1.25rem; }
+  .summary-label { font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:.06em; margin-bottom:6px; }
+  .summary-val { font-size:28px; font-weight:600; line-height:1; }
+  .summary-sub { font-size:12px; color:var(--text2); margin-top:4px; }
+  .val-green { color:var(--green); } .val-yellow { color:var(--yellow); } .val-red { color:var(--red); } .val-white { color:var(--text); }
 
-  table { width: 100%; border-collapse: collapse; }
-  thead th { background: var(--surface2); padding: 10px 1rem; text-align: left; font-size: 11px; font-weight: 500; color: var(--text3); text-transform: uppercase; letter-spacing: .06em; border-bottom: 1px solid var(--border); white-space: nowrap; }
-  tbody tr { border-bottom: 1px solid var(--border); cursor: pointer; transition: background .12s; }
-  tbody tr:last-child { border-bottom: none; }
-  tbody tr:hover { background: var(--surface2); }
-  td { padding: 12px 1rem; font-size: 13px; vertical-align: middle; }
-  .client-name { font-weight: 600; color: var(--text); }
-  .client-industry { font-size: 11px; color: var(--text3); margin-top: 2px; }
-  .score-cell { font-weight: 700; font-size: 16px; }
+  /* Table */
+  .table-wrap { background:var(--surface); border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+  .table-header { display:flex; align-items:center; justify-content:space-between; padding:1rem 1.25rem; border-bottom:1px solid var(--border); }
+  .table-title { font-weight:600; font-size:14px; }
+  .table-hint { font-size:12px; color:var(--text3); }
+  table { width:100%; border-collapse:collapse; }
+  thead th { background:var(--surface2); padding:10px 1rem; text-align:left; font-size:11px; font-weight:500; color:var(--text3); text-transform:uppercase; letter-spacing:.06em; border-bottom:1px solid var(--border); white-space:nowrap; }
+  tbody tr { border-bottom:1px solid var(--border); cursor:pointer; transition:background .12s; }
+  tbody tr:last-child { border-bottom:none; }
+  tbody tr:hover { background:var(--surface2); }
+  td { padding:12px 1rem; font-size:13px; vertical-align:middle; }
+  .client-name { font-weight:600; color:var(--text); }
+  .client-industry { font-size:11px; color:var(--text3); margin-top:2px; }
 
-  /* ── Status badges ── */
-  .badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; letter-spacing: .03em; }
-  .badge-green  { background: var(--green-bg);  color: var(--green);  border: 1px solid var(--green-bd); }
-  .badge-yellow { background: var(--yellow-bg); color: var(--yellow); border: 1px solid var(--yellow-bd); }
-  .badge-red    { background: var(--red-bg);    color: var(--red);    border: 1px solid var(--red-bd); }
-  .badge-gray   { background: var(--surface2);  color: var(--text3);  border: 1px solid var(--border); }
-  .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  /* Badges */
+  .badge { display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:600; padding:3px 10px; border-radius:20px; letter-spacing:.03em; }
+  .badge-green  { background:var(--green-bg);  color:var(--green);  border:1px solid var(--green-bd); }
+  .badge-yellow { background:var(--yellow-bg); color:var(--yellow); border:1px solid var(--yellow-bd); }
+  .badge-red    { background:var(--red-bg);    color:var(--red);    border:1px solid var(--red-bd); }
+  .badge-gray   { background:var(--surface2);  color:var(--text3);  border:1px solid var(--border); }
+  .dot { width:6px; height:6px; border-radius:50%; background:currentColor; }
 
-  /* ── Flag chips ── */
-  .flags-cell { display: flex; flex-wrap: wrap; gap: 4px; }
-  .flag-chip { font-size: 10px; padding: 2px 7px; border-radius: 4px; }
-  .flag-danger  { background: var(--red-bg);    color: var(--red);    border: 1px solid var(--red-bd); }
-  .flag-warning { background: var(--yellow-bg); color: var(--yellow); border: 1px solid var(--yellow-bd); }
+  /* Score pill */
+  .score-pill { display:inline-block; font-size:11px; font-weight:700; padding:2px 8px; border-radius:4px; }
+  .pill-green  { background:var(--green-bg);  color:var(--green); }
+  .pill-yellow { background:var(--yellow-bg); color:var(--yellow); }
+  .pill-red    { background:var(--red-bg);    color:var(--red); }
+  .pill-gray   { background:var(--surface2);  color:var(--text3); }
+  .pending { color:var(--text3); font-size:12px; font-style:italic; }
 
-  /* ── Category mini-scores ── */
-  .cat-scores { display: flex; gap: 6px; }
-  .cat-score { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-  .cat-label { font-size: 9px; color: var(--text3); text-transform: uppercase; letter-spacing: .04em; }
-  .cat-val   { font-size: 12px; font-weight: 600; }
+  /* Flag chips */
+  .flags-cell { display:flex; flex-wrap:wrap; gap:4px; }
+  .flag-chip { font-size:10px; padding:2px 7px; border-radius:4px; }
+  .flag-danger  { background:var(--red-bg);    color:var(--red);    border:1px solid var(--red-bd); }
+  .flag-warning { background:var(--yellow-bg); color:var(--yellow); border:1px solid var(--yellow-bd); }
 
-  /* ── Empty / pending ── */
-  .pending { color: var(--text3); font-size: 12px; font-style: italic; }
+  /* Modal */
+  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.75); z-index:100; display:flex; align-items:flex-start; justify-content:center; padding:2rem 1rem; overflow-y:auto; opacity:0; pointer-events:none; transition:opacity .2s; }
+  .modal-overlay.open { opacity:1; pointer-events:all; }
+  .modal { background:var(--surface); border:1px solid var(--border); border-radius:14px; width:100%; max-width:900px; animation:slideUp .2s ease; }
+  @keyframes slideUp { from{transform:translateY(24px);opacity:0} to{transform:translateY(0);opacity:1} }
+  .modal-header { display:flex; align-items:center; justify-content:space-between; padding:1.25rem 1.5rem; border-bottom:1px solid var(--border); }
+  .modal-client { display:flex; align-items:center; gap:12px; }
+  .modal-avatar { width:40px; height:40px; border-radius:10px; background:var(--accent); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px; color:#fff; flex-shrink:0; }
+  .modal-name { font-weight:700; font-size:17px; }
+  .modal-meta { font-size:12px; color:var(--text2); margin-top:2px; }
+  .modal-score { font-size:36px; font-weight:700; line-height:1; }
+  .modal-close { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius); width:32px; height:32px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text2); font-size:18px; }
+  .modal-close:hover { background:var(--border); color:var(--text); }
+  .modal-body { padding:1.5rem; display:flex; flex-direction:column; gap:1.5rem; }
+  .section-head { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.08em; color:var(--text3); margin-bottom:.75rem; display:flex; align-items:center; gap:8px; }
+  .section-head::after { content:''; flex:1; height:1px; background:var(--border); }
 
-  /* ── Modal overlay ── */
-  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.75); z-index: 100; display: flex; align-items: flex-start; justify-content: center; padding: 2rem 1rem; overflow-y: auto; opacity: 0; pointer-events: none; transition: opacity .2s; }
-  .modal-overlay.open { opacity: 1; pointer-events: all; }
-  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; width: 100%; max-width: 860px; animation: slideUp .2s ease; }
-  @keyframes slideUp { from { transform: translateY(24px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  /* Category cards */
+  .cat-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:.75rem; }
+  .cat-card { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius); padding:.875rem 1rem; }
+  .cat-card-label { font-size:10px; color:var(--text3); text-transform:uppercase; letter-spacing:.06em; margin-bottom:4px; }
+  .cat-card-score { font-size:24px; font-weight:700; margin-bottom:4px; }
+  .cat-card-weight { font-size:11px; color:var(--text3); }
+  .cat-card-source { font-size:10px; color:var(--text3); margin-top:4px; }
 
-  /* ── Modal header ── */
-  .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border); }
-  .modal-client { display: flex; align-items: center; gap: 12px; }
-  .modal-avatar { width: 40px; height: 40px; border-radius: 10px; background: var(--accent); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; color: #fff; flex-shrink: 0; }
-  .modal-name   { font-weight: 700; font-size: 17px; }
-  .modal-meta   { font-size: 12px; color: var(--text2); margin-top: 2px; }
-  .modal-score-block { text-align: right; }
-  .modal-score  { font-size: 36px; font-weight: 700; line-height: 1; }
-  .modal-close  { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text2); font-size: 18px; line-height: 1; flex-shrink: 0; }
-  .modal-close:hover { background: var(--border); color: var(--text); }
+  /* Asana tasks section */
+  .task-list { display:flex; flex-direction:column; gap:6px; }
+  .task-item { display:flex; align-items:center; gap:10px; padding:8px 12px; border-radius:var(--radius); background:var(--surface2); border:1px solid var(--border); }
+  .task-status-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .task-dot-complete { background:var(--green); }
+  .task-dot-overdue  { background:var(--red); }
+  .task-dot-upcoming { background:var(--yellow); }
+  .task-name { flex:1; font-size:13px; }
+  .task-due  { font-size:11px; color:var(--text3); white-space:nowrap; }
+  .task-badge { font-size:10px; font-weight:600; padding:2px 7px; border-radius:4px; }
+  .task-badge-overdue  { background:var(--red-bg);    color:var(--red);    border:1px solid var(--red-bd); }
+  .task-badge-complete { background:var(--green-bg);  color:var(--green);  border:1px solid var(--green-bd); }
+  .task-badge-upcoming { background:var(--yellow-bg); color:var(--yellow); border:1px solid var(--yellow-bd); }
+  .task-badge-priority { background:#1a1040; color:#a78bfa; border:1px solid #4c1d95; margin-left:4px; }
 
-  /* ── Modal body ── */
-  .modal-body { padding: 1.5rem; display: flex; flex-direction: column; gap: 1.5rem; }
+  /* Calc table */
+  .calc-table { width:100%; border-collapse:collapse; }
+  .calc-table th { font-size:11px; color:var(--text3); font-weight:500; text-align:left; padding:6px 10px; border-bottom:1px solid var(--border); }
+  .calc-table td { padding:8px 10px; font-size:12px; border-bottom:1px solid var(--border); vertical-align:middle; }
+  .calc-table tr:last-child td { border-bottom:none; }
+  .calc-table tr:hover td { background:var(--surface2); }
 
-  /* ── Section headings ── */
-  .section-head { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--text3); margin-bottom: .75rem; display: flex; align-items: center; gap: 8px; }
-  .section-head::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  /* Metrics grid */
+  .metrics-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:.75rem; }
+  .metric-box { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius); padding:.75rem 1rem; }
+  .metric-box-label { font-size:10px; color:var(--text3); margin-bottom:4px; }
+  .metric-box-this  { font-size:18px; font-weight:700; }
+  .metric-box-prior { font-size:11px; color:var(--text3); margin-top:2px; }
+  .metric-box-mom   { font-size:11px; font-weight:600; margin-top:2px; }
+  .mom-up { color:var(--green); } .mom-down { color:var(--red); } .mom-flat { color:var(--text3); }
 
-  /* ── Category score cards ── */
-  .cat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: .75rem; }
-  .cat-card { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: .875rem 1rem; }
-  .cat-card-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
-  .cat-card-score { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
-  .cat-card-weight { font-size: 11px; color: var(--text3); }
-  .cat-card-source { font-size: 10px; color: var(--text3); margin-top: 4px; }
+  /* Rubric */
+  .rubric-table { width:100%; border-collapse:collapse; }
+  .rubric-table th { font-size:11px; color:var(--text3); font-weight:500; text-align:left; padding:6px 10px; border-bottom:1px solid var(--border); }
+  .rubric-table td { padding:8px 10px; font-size:12px; border-bottom:1px solid var(--border); }
+  .rubric-table tr:last-child td { border-bottom:none; }
+  .th-red { color:var(--red) !important; } .th-yellow { color:var(--yellow) !important; } .th-green { color:var(--green) !important; }
+  .cell-red { color:var(--red); } .cell-yellow { color:var(--yellow); } .cell-green { color:var(--green); }
 
-  /* ── Calc table ── */
-  .calc-table { width: 100%; border-collapse: collapse; }
-  .calc-table th { font-size: 11px; color: var(--text3); font-weight: 500; text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--border); }
-  .calc-table td { padding: 8px 10px; font-size: 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
-  .calc-table tr:last-child td { border-bottom: none; }
-  .calc-table tr:hover td { background: var(--surface2); }
-  .score-pill { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 4px; }
-  .pill-green  { background: var(--green-bg);  color: var(--green); }
-  .pill-yellow { background: var(--yellow-bg); color: var(--yellow); }
-  .pill-red    { background: var(--red-bg);    color: var(--red); }
-  .pill-gray   { background: var(--surface2);  color: var(--text3); }
-  .formula-row td { background: var(--surface2); font-weight: 600; }
-
-  /* ── Raw metrics grid ── */
-  .metrics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .75rem; }
-  .metric-box { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: .75rem 1rem; }
-  .metric-box-label { font-size: 10px; color: var(--text3); margin-bottom: 4px; }
-  .metric-box-this  { font-size: 18px; font-weight: 700; color: var(--text); }
-  .metric-box-prior { font-size: 11px; color: var(--text3); margin-top: 2px; }
-  .metric-box-mom   { font-size: 11px; font-weight: 600; margin-top: 2px; }
-  .mom-up   { color: var(--green); }
-  .mom-down { color: var(--red); }
-  .mom-flat { color: var(--text3); }
-
-  /* ── Benchmark rubric ── */
-  .rubric-table { width: 100%; border-collapse: collapse; }
-  .rubric-table th { font-size: 11px; color: var(--text3); font-weight: 500; text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--border); }
-  .rubric-table td { padding: 8px 10px; font-size: 12px; border-bottom: 1px solid var(--border); }
-  .rubric-table tr:last-child td { border-bottom: none; }
-  .th-red    { color: var(--red) !important; }
-  .th-yellow { color: var(--yellow) !important; }
-  .th-green  { color: var(--green) !important; }
-  .cell-red    { color: var(--red); }
-  .cell-yellow { color: var(--yellow); }
-  .cell-green  { color: var(--green); }
-
-  /* ── Flags section ── */
-  .flags-list { display: flex; flex-direction: column; gap: 8px; }
-  .flag-item { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border-radius: var(--radius); border: 1px solid; }
-  .flag-item.danger  { background: var(--red-bg);    border-color: var(--red-bd); }
-  .flag-item.warning { background: var(--yellow-bg); border-color: var(--yellow-bd); }
-  .flag-icon { font-size: 14px; margin-top: 1px; flex-shrink: 0; }
-  .flag-item.danger  .flag-icon { color: var(--red); }
-  .flag-item.warning .flag-icon { color: var(--yellow); }
-  .flag-msg  { font-size: 13px; }
-  .flag-item.danger  .flag-msg { color: var(--red); }
-  .flag-item.warning .flag-msg { color: var(--yellow); }
-  .no-flags { color: var(--text3); font-size: 13px; font-style: italic; }
-
-  /* ── Notes ── */
-  .notes-box { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; font-size: 13px; color: var(--text2); line-height: 1.6; }
-
-  /* ── Loading ── */
-  .loading { text-align: center; padding: 3rem; color: var(--text3); }
-
-  /* ── Tier label ── */
-  .tier-badge { display: inline-block; font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 3px; background: var(--surface2); color: var(--text3); border: 1px solid var(--border); vertical-align: middle; margin-left: 4px; }
-
-  /* ── Formula summary ── */
-  .formula-box { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: .875rem 1rem; font-size: 12px; color: var(--text2); line-height: 1.8; }
-  .formula-box strong { color: var(--text); }
+  /* Flags */
+  .flags-list { display:flex; flex-direction:column; gap:8px; }
+  .flag-item { display:flex; align-items:flex-start; gap:10px; padding:10px 12px; border-radius:var(--radius); border:1px solid; }
+  .flag-item.danger  { background:var(--red-bg);    border-color:var(--red-bd); }
+  .flag-item.warning { background:var(--yellow-bg); border-color:var(--yellow-bd); }
+  .flag-icon { font-size:14px; flex-shrink:0; }
+  .flag-item.danger  .flag-msg { color:var(--red); }
+  .flag-item.warning .flag-msg { color:var(--yellow); }
+  .no-flags { color:var(--text3); font-size:13px; font-style:italic; }
+  .notes-box { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius); padding:1rem; font-size:13px; color:var(--text2); line-height:1.6; white-space:pre-line; }
+  .formula-box { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius); padding:.875rem 1rem; font-size:12px; color:var(--text2); line-height:1.8; }
+  .tier-badge { display:inline-block; font-size:9px; font-weight:700; padding:1px 5px; border-radius:3px; background:var(--surface2); color:var(--text3); border:1px solid var(--border); vertical-align:middle; margin-left:4px; }
+  .loading { text-align:center; padding:3rem; color:var(--text3); }
+  .delivery-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:.75rem; margin-bottom:.75rem; }
+  .delivery-stat { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius); padding:.75rem 1rem; text-align:center; }
+  .delivery-stat-val { font-size:22px; font-weight:700; }
+  .delivery-stat-label { font-size:10px; color:var(--text3); margin-top:2px; text-transform:uppercase; letter-spacing:.05em; }
 </style>
 </head>
 <body>
@@ -193,17 +180,22 @@
 <div class="header">
   <div class="logo">
     <div class="logo-mark">R7</div>
-    <div>
-      <div class="logo-name">REV77 <span class="logo-sub">/ Client Health Score</span></div>
-    </div>
+    <div><div class="logo-name">REV77 <span class="logo-sub">/ Client Health Score</span></div></div>
   </div>
   <div class="header-right">
+    <span class="sync-status" id="sync-status"></span>
+    <button class="sync-btn" id="sync-btn" onclick="syncAsana()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" id="sync-icon">
+        <path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+      </svg>
+      Sync Asana
+    </button>
     <div class="period-badge" id="current-period">Loading...</div>
   </div>
 </div>
 
 <div class="main">
-  <div class="summary-row" id="summary-row">
+  <div class="summary-row">
     <div class="summary-card"><div class="summary-label">Total clients</div><div class="summary-val val-white" id="s-total">—</div></div>
     <div class="summary-card"><div class="summary-label">Green</div><div class="summary-val val-green" id="s-green">—</div><div class="summary-sub">Healthy</div></div>
     <div class="summary-card"><div class="summary-label">Yellow</div><div class="summary-val val-yellow" id="s-yellow">—</div><div class="summary-sub">Needs attention</div></div>
@@ -236,56 +228,52 @@
   </div>
 </div>
 
-<!-- ── Modal ── -->
+<!-- Modal -->
 <div class="modal-overlay" id="modal-overlay" onclick="closeModalOnOverlay(event)">
   <div class="modal" id="modal">
     <div class="modal-header">
       <div class="modal-client">
         <div class="modal-avatar" id="modal-avatar">--</div>
         <div>
-          <div class="modal-name" id="modal-name">Client Name</div>
+          <div class="modal-name" id="modal-name">Client</div>
           <div class="modal-meta" id="modal-meta">Industry · Period</div>
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:16px">
-        <div class="modal-score-block">
+        <div>
           <div class="modal-score" id="modal-score">--</div>
           <div id="modal-badge" style="margin-top:4px;text-align:right"></div>
         </div>
         <button class="modal-close" onclick="closeModal()">✕</button>
       </div>
     </div>
-    <div class="modal-body" id="modal-body">
-      <div class="loading">Loading...</div>
-    </div>
+    <div class="modal-body" id="modal-body"><div class="loading">Loading...</div></div>
   </div>
 </div>
 
 <script>
 // ── Helpers ──────────────────────────────────────────────────────────────────
-const fmt = (v, prefix='', suffix='', decimals=1) =>
-  v !== null && v !== undefined ? `${prefix}${Number(v).toFixed(decimals)}${suffix}` : '—';
+const fmt = (v,pre='',suf='',dec=1) => v!=null ? `${pre}${Number(v).toFixed(dec)}${suf}` : '—';
 const fmtMoM = (v) => {
-  if (v === null || v === undefined) return '<span class="mom-flat">N/A</span>';
-  const cls = v > 0 ? 'mom-up' : v < 0 ? 'mom-down' : 'mom-flat';
-  const arrow = v > 0 ? '▲' : v < 0 ? '▼' : '–';
-  return `<span class="${cls}">${arrow} ${Math.abs(v).toFixed(1)}%</span>`;
+  if (v==null) return '<span class="mom-flat">N/A</span>';
+  const cls = v>0?'mom-up':v<0?'mom-down':'mom-flat';
+  const arr = v>0?'▲':v<0?'▼':'–';
+  return `<span class="${cls}">${arr} ${Math.abs(v).toFixed(1)}%</span>`;
 };
 const scorePill = (v) => {
-  if (v === null || v === undefined) return '<span class="pending">Pending</span>';
-  const cls = v >= 80 ? 'pill-green' : v >= 60 ? 'pill-yellow' : 'pill-red';
+  if (v==null) return '<span class="pending">Pending</span>';
+  const cls = v>=80?'pill-green':v>=60?'pill-yellow':'pill-red';
   return `<span class="score-pill ${cls}">${Number(v).toFixed(1)}</span>`;
 };
-const scoreColor = (v) => v >= 80 ? 'val-green' : v >= 60 ? 'val-yellow' : 'val-red';
-const initials = (name) => name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
-const badgeHtml = (status) => {
-  if (!status) return '<span class="badge badge-gray"><span class="dot"></span>Pending</span>';
-  const map = { GREEN: 'badge-green', YELLOW: 'badge-yellow', RED: 'badge-red' };
-  const label = status.charAt(0) + status.slice(1).toLowerCase();
-  return `<span class="badge ${map[status]||'badge-gray'}"><span class="dot"></span>${label}</span>`;
+const scoreColor = (v) => v>=80?'val-green':v>=60?'val-yellow':'val-red';
+const initials = (n) => n.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+const badgeHtml = (s) => {
+  if (!s) return '<span class="badge badge-gray"><span class="dot"></span>Pending</span>';
+  const m={GREEN:'badge-green',YELLOW:'badge-yellow',RED:'badge-red'};
+  return `<span class="badge ${m[s]||'badge-gray'}"><span class="dot"></span>${s.charAt(0)+s.slice(1).toLowerCase()}</span>`;
 };
 
-// ── Fetch & render table ─────────────────────────────────────────────────────
+// ── Load table ────────────────────────────────────────────────────────────────
 async function loadClients() {
   try {
     const res  = await fetch('/api/clients');
@@ -294,12 +282,12 @@ async function loadClients() {
     renderSummary(data);
   } catch(e) {
     document.getElementById('client-table-body').innerHTML =
-      '<tr><td colspan="9" class="loading">Failed to load clients. Is the server running?</td></tr>';
+      '<tr><td colspan="9" class="loading">Failed to load. Is the server running?</td></tr>';
   }
 }
 
 function renderSummary(clients) {
-  const scored = clients.filter(c => c.status);
+  const scored = clients.filter(c=>c.status);
   document.getElementById('s-total').textContent  = clients.length;
   document.getElementById('s-green').textContent  = scored.filter(c=>c.status==='GREEN').length;
   document.getElementById('s-yellow').textContent = scored.filter(c=>c.status==='YELLOW').length;
@@ -310,282 +298,301 @@ function renderSummary(clients) {
 
 function renderTable(clients) {
   const tbody = document.getElementById('client-table-body');
-  if (!clients.length) {
-    tbody.innerHTML = '<tr><td colspan="9" class="loading">No clients found.</td></tr>';
-    return;
-  }
+  if (!clients.length) { tbody.innerHTML='<tr><td colspan="9" class="loading">No clients found.</td></tr>'; return; }
   tbody.innerHTML = clients.map(c => {
     const flags = c.flags ? c.flags.split(' | ').slice(0,2).map(f => {
-      const isDanger = f.includes('Red') || f.includes('zero') || f.includes('risk') || f.includes('Risk');
-      return `<span class="flag-chip ${isDanger?'flag-danger':'flag-warning'}">${f.length > 35 ? f.slice(0,35)+'…' : f}</span>`;
+      const d = f.includes('Red')||f.includes('overdue')||f.includes('risk')||f.includes('zero')||f.includes('down');
+      return `<span class="flag-chip ${d?'flag-danger':'flag-warning'}">${f.length>38?f.slice(0,38)+'…':f}</span>`;
     }).join('') : '';
-
     const scoreVal = c.composite_score;
-    const scoreHtml = scoreVal !== null && scoreVal !== undefined
+    const scoreHtml = scoreVal!=null
       ? `<span class="${scoreColor(scoreVal)}" style="font-weight:700;font-size:16px">${Number(scoreVal).toFixed(1)}</span>`
       : '<span class="pending">—</span>';
-
     return `
       <tr onclick="openModal(${c.id})">
-        <td>
-          <div class="client-name">${c.name}</div>
-          <div class="client-industry">${c.industry || '—'}</div>
-        </td>
-        <td style="color:var(--text2)">${c.period || '—'}</td>
+        <td><div class="client-name">${c.name}</div><div class="client-industry">${c.industry||'—'}</div></td>
+        <td style="color:var(--text2)">${c.period||'—'}</td>
         <td>${scorePill(c.campaign_score)}</td>
         <td>${scorePill(c.delivery_score)}</td>
         <td>${scorePill(c.communication_score)}</td>
         <td>${scorePill(c.risk_score)}</td>
         <td>${scoreHtml}</td>
         <td>${badgeHtml(c.status)}</td>
-        <td><div class="flags-cell">${flags || '<span class="pending">—</span>'}</div></td>
+        <td><div class="flags-cell">${flags||'<span class="pending">—</span>'}</div></td>
       </tr>`;
   }).join('');
 }
 
-// ── Modal ────────────────────────────────────────────────────────────────────
-async function openModal(clientId) {
-  const overlay = document.getElementById('modal-overlay');
-  overlay.classList.add('open');
-  document.getElementById('modal-body').innerHTML = '<div class="loading">Loading score breakdown...</div>';
-  document.getElementById('modal-name').textContent  = '...';
-  document.getElementById('modal-score').textContent = '—';
+// ── Asana Sync ────────────────────────────────────────────────────────────────
+async function syncAsana() {
+  const btn    = document.getElementById('sync-btn');
+  const icon   = document.getElementById('sync-icon');
+  const status = document.getElementById('sync-status');
+
+  btn.disabled = true;
+  icon.classList.add('spin');
+  status.textContent = 'Syncing...';
+  status.className   = 'sync-status';
 
   try {
-    const res  = await fetch(`/api/clients/${clientId}`);
+    const res  = await fetch('/api/asana/sync', { method:'POST' });
     const data = await res.json();
-    renderModal(data);
+
+    if (data.success) {
+      const updated = data.updated.length;
+      const errors  = data.errors.length;
+      status.textContent = `✓ Synced ${updated} client${updated!==1?'s':''} ${errors>0?`(${errors} skipped)`:''}`;
+      status.className   = 'sync-status success';
+      loadClients(); // refresh table
+    } else {
+      status.textContent = `✗ ${data.error}`;
+      status.className   = 'sync-status error';
+    }
   } catch(e) {
-    document.getElementById('modal-body').innerHTML = '<div class="loading">Failed to load client detail.</div>';
+    status.textContent = '✗ Sync failed — check connection';
+    status.className   = 'sync-status error';
+  } finally {
+    btn.disabled = false;
+    icon.classList.remove('spin');
+    setTimeout(() => { status.textContent=''; status.className='sync-status'; }, 8000);
   }
 }
 
-function renderModal({ client, score, benchmark }) {
+// ── Modal ─────────────────────────────────────────────────────────────────────
+async function openModal(clientId) {
+  document.getElementById('modal-overlay').classList.add('open');
+  document.getElementById('modal-body').innerHTML = '<div class="loading">Loading...</div>';
+  document.getElementById('modal-name').textContent = '...';
+  document.getElementById('modal-score').textContent = '—';
+
+  // Fetch client detail + Asana tasks in parallel
+  const [detailRes, asanaRes] = await Promise.allSettled([
+    fetch(`/api/clients/${clientId}`).then(r=>r.json()),
+    fetch(`/api/asana/client/${encodeURIComponent('')}`).then(r=>r.json()).catch(()=>null),
+  ]);
+
+  const detail = detailRes.status==='fulfilled' ? detailRes.value : null;
+  if (!detail) { document.getElementById('modal-body').innerHTML='<div class="loading">Failed to load.</div>'; return; }
+
+  // Fetch Asana tasks for this client
+  let asanaTasks = null;
+  try {
+    const ar = await fetch(`/api/asana/client/${encodeURIComponent(detail.client.name)}`);
+    asanaTasks = await ar.json();
+  } catch(e) { asanaTasks = null; }
+
+  renderModal(detail, asanaTasks);
+}
+
+function renderModal({ client, score, benchmark }, asanaTasks) {
   const s = score || {};
   const scoreVal = s.composite_score;
 
-  // Header
   document.getElementById('modal-avatar').textContent = initials(client.name);
   document.getElementById('modal-name').textContent   = client.name;
-  document.getElementById('modal-meta').textContent   = `${client.industry} · ${s.period || 'No data yet'}`;
+  document.getElementById('modal-meta').textContent   = `${client.industry} · ${s.period||'No data'}`;
   const scoreEl = document.getElementById('modal-score');
-  scoreEl.textContent = scoreVal !== null && scoreVal !== undefined ? Number(scoreVal).toFixed(1) : '—';
-  scoreEl.className   = 'modal-score ' + (scoreVal ? scoreColor(scoreVal) : 'val-white');
+  scoreEl.textContent = scoreVal!=null ? Number(scoreVal).toFixed(1) : '—';
+  scoreEl.className   = 'modal-score '+(scoreVal?scoreColor(scoreVal):'val-white');
   document.getElementById('modal-badge').innerHTML = badgeHtml(s.status);
 
-  // Parse flags
-  const flagList = s.flags ? s.flags.split(' | ').map(f => {
-    const isDanger = f.includes('Red') || f.includes('zero') || f.includes('risk') || f.includes('Risk') || f.includes('cancel') || f.includes('no contact');
-    return { type: isDanger ? 'danger' : 'warning', msg: f };
-  }) : [];
+  // Flags
+  const flagList = s.flags ? s.flags.split(' | ').map(f => ({
+    type: f.includes('Red')||f.includes('overdue')||f.includes('risk')||f.includes('cancel')||f.includes('down -') ? 'danger' : 'warning',
+    msg: f
+  })) : [];
 
-  // Tier 1 metrics breakdown rows
+  // Asana tasks HTML
+  const asanaHtml = buildAsanaSection(asanaTasks, s.delivery_score);
+
+  // Tier 1 rows
   const tier1Rows = [
-    { label: 'MoM CPL Change',         this: fmt(s.cpl_this,'$'), prior: fmt(s.cpl_prior,'$'), mom: s.cpl_mom_pct,       score: calcLocalScore('cpl', s.cpl_mom_pct),       weight: '20%', tier: 'T1' },
-    { label: 'MoM CPC Change',         this: fmt(s.cpc_this,'$'), prior: fmt(s.cpc_prior,'$'), mom: s.cpc_mom_pct,       score: calcLocalScore('cpc', s.cpc_mom_pct),       weight: '10%', tier: 'T1' },
-    { label: 'Budget Pacing',          this: fmt(s.budget_pacing_pct,'','%'), prior: '—', mom: null,                      score: calcLocalScore('pacing', s.budget_pacing_pct), weight: '10%', tier: 'T1' },
-    { label: 'MoM Conversions',        this: s.conversions_this, prior: s.conversions_prior, mom: s.conv_mom_pct,        score: calcLocalScore('convMoM', s.conv_mom_pct),   weight: '20%', tier: 'T1' },
-    { label: 'Zero Conversion Days',   this: `${s.zero_conv_days ?? '—'} days`, prior: '—', mom: null,                  score: calcLocalScore('zeroConv', s.zero_conv_days), weight: '10%', tier: 'T1' },
-    { label: 'MoM Conversion Rate',    this: fmt(s.conv_rate_this,'','%'), prior: fmt(s.conv_rate_prior,'','%'), mom: s.cvr_mom_pct, score: calcLocalScore('cvrMoM', s.cvr_mom_pct), weight: '10%', tier: 'T1' },
-    { label: 'MoM Sessions',           this: s.sessions_this?.toLocaleString(), prior: s.sessions_prior?.toLocaleString(), mom: s.sessions_mom_pct, score: calcLocalScore('sessions', s.sessions_mom_pct), weight: '10%', tier: 'T1' },
-    { label: 'MoM New Users',          this: s.new_users_this?.toLocaleString(), prior: s.new_users_prior?.toLocaleString(), mom: s.new_users_mom_pct, score: calcLocalScore('newUsers', s.new_users_mom_pct), weight: '10%', tier: 'T1' },
-    { label: 'Engagement Rate',        this: fmt(s.engagement_rate,'','%'), prior: '—', mom: null,                       score: calcLocalScore('engRate', s.engagement_rate), weight: '10%', tier: 'T1' },
-    { label: 'Branded Keyword Position', this: `Position ${s.branded_keyword_pos ?? '—'}`, prior: '—', mom: null,       score: calcLocalScore('branded', s.branded_keyword_pos), weight: 'KW', tier: 'T1*' },
-    { label: 'Local Keyword Position', this: `Position ${s.local_keyword_pos ?? '—'}`, prior: '—', mom: null,           score: calcLocalScore('local', s.local_keyword_pos),   weight: 'KW', tier: 'T1*' },
+    ['MoM CPL Change',     fmt(s.cpl_this,'$'),      fmt(s.cpl_prior,'$'),      s.cpl_mom_pct,      'T1', calcScore('cpl',s.cpl_mom_pct),      '20%'],
+    ['MoM CPC Change',     fmt(s.cpc_this,'$'),      fmt(s.cpc_prior,'$'),      s.cpc_mom_pct,      'T1', calcScore('cpc',s.cpc_mom_pct),      '10%'],
+    ['Budget Pacing',      fmt(s.budget_pacing_pct,'','%'), '—',                null,               'T1', calcScore('pacing',s.budget_pacing_pct),'10%'],
+    ['MoM Conversions',    s.conversions_this,       s.conversions_prior,       s.conv_mom_pct,     'T1', calcScore('convMoM',s.conv_mom_pct),  '20%'],
+    ['Zero Conv Days',     `${s.zero_conv_days??'—'} days`,'—',                 null,               'T1', calcScore('zeroConv',s.zero_conv_days),'10%'],
+    ['MoM Conv Rate',      fmt(s.conv_rate_this,'','%'),fmt(s.conv_rate_prior,'','%'),s.cvr_mom_pct,'T1', calcScore('cvrMoM',s.cvr_mom_pct),    '10%'],
+    ['MoM Sessions',       s.sessions_this?.toLocaleString(), s.sessions_prior?.toLocaleString(), s.sessions_mom_pct,'T1',calcScore('sessions',s.sessions_mom_pct),'10%'],
+    ['MoM New Users',      s.new_users_this?.toLocaleString(),s.new_users_prior?.toLocaleString(),s.new_users_mom_pct,'T1',calcScore('newUsers',s.new_users_mom_pct),'10%'],
+    ['Engagement Rate',    fmt(s.engagement_rate,'','%'),'—',                   null,               'T1', calcScore('engRate',s.engagement_rate),'10%'],
+    ['Branded Keywords',   `Pos ${s.branded_keyword_pos??'—'}`, '—',            null,              'T1*', calcScore('branded',s.branded_keyword_pos),'KW'],
+    ['Local Keywords',     `Pos ${s.local_keyword_pos??'—'}`,   '—',            null,              'T1*', calcScore('local',s.local_keyword_pos),'KW'],
   ];
 
-  const tier1Html = tier1Rows.map(r => `
+  const tier1Html = tier1Rows.map(([label,thisV,priorV,mom,tier,sc,wt]) => `
     <tr>
-      <td>${r.label} <span class="tier-badge">${r.tier}</span></td>
-      <td style="color:var(--text)">${r.this ?? '—'}</td>
-      <td style="color:var(--text2)">${r.prior ?? '—'}</td>
-      <td>${r.mom !== null && r.mom !== undefined ? fmtMoM(r.mom) : '<span style="color:var(--text3)">—</span>'}</td>
-      <td>${scorePill(r.score)}</td>
-      <td style="color:var(--text3)">${r.weight}</td>
+      <td>${label} <span class="tier-badge">${tier}</span></td>
+      <td style="color:var(--text)">${thisV??'—'}</td>
+      <td style="color:var(--text2)">${priorV??'—'}</td>
+      <td>${mom!=null?fmtMoM(mom):'<span style="color:var(--text3)">—</span>'}</td>
+      <td>${scorePill(sc)}</td>
+      <td style="color:var(--text3)">${wt}</td>
     </tr>`).join('');
 
-  // Formula summary
-  const tier1Normalized = s.campaign_score !== null ? '80.7' : '—';
-
-  // Benchmark rows
   const bRows = benchmark ? `
-    <tr><td>Cost Per Lead (CPL)</td><td class="cell-red">Above $${benchmark.cpl_red}</td><td class="cell-yellow">$${benchmark.cpl_green}–$${benchmark.cpl_red}</td><td class="cell-green">Below $${benchmark.cpl_green}</td><td>${fmt(s.cpl_this,'$')}</td></tr>
-    <tr><td>Click-Through Rate (CTR)</td><td class="cell-red">Below ${benchmark.ctr_red}%</td><td class="cell-yellow">${benchmark.ctr_red}–${benchmark.ctr_green}%</td><td class="cell-green">Above ${benchmark.ctr_green}%</td><td>${fmt(s.ctr_this,'','%')}</td></tr>
-    <tr><td>Conversion Rate</td><td class="cell-red">Below ${benchmark.cvr_red}%</td><td class="cell-yellow">${benchmark.cvr_red}–${benchmark.cvr_green}%</td><td class="cell-green">Above ${benchmark.cvr_green}%</td><td>${fmt(s.conv_rate_this,'','%')}</td></tr>
-  ` : '<tr><td colspan="5" style="color:var(--text3);font-style:italic">No industry benchmark configured for this client. Add industry in the Benchmarks tab.</td></tr>';
+    <tr><td>CPL ($)</td><td class="cell-red">Above $${benchmark.cpl_red}</td><td class="cell-yellow">$${benchmark.cpl_green}–$${benchmark.cpl_red}</td><td class="cell-green">Below $${benchmark.cpl_green}</td><td>${fmt(s.cpl_this,'$')}</td></tr>
+    <tr><td>CTR (%)</td><td class="cell-red">Below ${benchmark.ctr_red}%</td><td class="cell-yellow">${benchmark.ctr_red}–${benchmark.ctr_green}%</td><td class="cell-green">Above ${benchmark.ctr_green}%</td><td>${fmt(s.ctr_this,'','%')}</td></tr>
+    <tr><td>Conv Rate (%)</td><td class="cell-red">Below ${benchmark.cvr_red}%</td><td class="cell-yellow">${benchmark.cvr_red}–${benchmark.cvr_green}%</td><td class="cell-green">Above ${benchmark.cvr_green}%</td><td>${fmt(s.conv_rate_this,'','%')}</td></tr>
+  ` : '<tr><td colspan="5" style="color:var(--text3);font-style:italic">No industry benchmark configured.</td></tr>';
 
   document.getElementById('modal-body').innerHTML = `
-
-    <!-- Category scores -->
     <div>
       <div class="section-head">Score by category</div>
       <div class="cat-grid">
         <div class="cat-card">
           <div class="cat-card-label">Campaign Performance</div>
-          <div class="cat-card-score ${s.campaign_score ? scoreColor(s.campaign_score) : 'val-white'}">${s.campaign_score !== null && s.campaign_score !== undefined ? Number(s.campaign_score).toFixed(1) : '—'}</div>
-          <div class="cat-card-weight">Weight: 40%</div>
-          <div class="cat-card-source">TapClicks</div>
+          <div class="cat-card-score ${s.campaign_score?scoreColor(s.campaign_score):'val-white'}">${s.campaign_score!=null?Number(s.campaign_score).toFixed(1):'—'}</div>
+          <div class="cat-card-weight">Weight: 40%</div><div class="cat-card-source">TapClicks</div>
         </div>
         <div class="cat-card">
           <div class="cat-card-label">Delivery / Execution</div>
-          <div class="cat-card-score ${s.delivery_score ? scoreColor(s.delivery_score) : 'val-white'}">${s.delivery_score !== null && s.delivery_score !== undefined ? Number(s.delivery_score).toFixed(1) : '—'}</div>
-          <div class="cat-card-weight">Weight: 25%</div>
-          <div class="cat-card-source">Asana (pending)</div>
+          <div class="cat-card-score ${s.delivery_score?scoreColor(s.delivery_score):'val-white'}">${s.delivery_score!=null?Number(s.delivery_score).toFixed(1):'—'}</div>
+          <div class="cat-card-weight">Weight: 25%</div><div class="cat-card-source">Asana</div>
         </div>
         <div class="cat-card">
           <div class="cat-card-label">Client Communication</div>
-          <div class="cat-card-score ${s.communication_score ? scoreColor(s.communication_score) : 'val-white'}">${s.communication_score !== null && s.communication_score !== undefined ? Number(s.communication_score).toFixed(1) : '—'}</div>
-          <div class="cat-card-weight">Weight: 20%</div>
-          <div class="cat-card-source">Outlook</div>
+          <div class="cat-card-score ${s.communication_score?scoreColor(s.communication_score):'val-white'}">${s.communication_score!=null?Number(s.communication_score).toFixed(1):'—'}</div>
+          <div class="cat-card-weight">Weight: 20%</div><div class="cat-card-source">Outlook</div>
         </div>
         <div class="cat-card">
           <div class="cat-card-label">Strategic / Acct Risk</div>
-          <div class="cat-card-score ${s.risk_score ? scoreColor(s.risk_score) : 'val-white'}">${s.risk_score !== null && s.risk_score !== undefined ? Number(s.risk_score).toFixed(1) : '—'}</div>
-          <div class="cat-card-weight">Weight: 15%</div>
-          <div class="cat-card-source">Client DB (pending)</div>
+          <div class="cat-card-score ${s.risk_score?scoreColor(s.risk_score):'val-white'}">${s.risk_score!=null?Number(s.risk_score).toFixed(1):'—'}</div>
+          <div class="cat-card-weight">Weight: 15%</div><div class="cat-card-source">Client DB (pending)</div>
         </div>
       </div>
     </div>
 
-    <!-- Step-by-step calculation -->
+    ${asanaHtml}
+
     <div>
-      <div class="section-head">Score calculation — step by step</div>
+      <div class="section-head">Campaign score calculation — step by step</div>
       <table class="calc-table">
         <thead><tr><th>Metric</th><th>This period</th><th>Prior period</th><th>MoM change</th><th>Score</th><th>Weight</th></tr></thead>
         <tbody>${tier1Html}</tbody>
       </table>
       <div class="formula-box" style="margin-top:.75rem">
-        <strong>Step 1 — Tier 1 score:</strong> Raw weighted total ÷ 1.10 (weights sum to 110%) = <strong>${fmt(s.campaign_score, '', '', 1)}</strong><br>
-        <strong>Step 2 — Keyword score:</strong> (Branded × 50%) + (Local × 50%) = <strong>${s.branded_keyword_pos && s.local_keyword_pos ? ((calcLocalScore('branded', s.branded_keyword_pos) * 0.5) + (calcLocalScore('local', s.local_keyword_pos) * 0.5)).toFixed(1) : '—'}</strong><br>
-        <strong>Step 3 — Campaign Performance:</strong> (Tier 1 × 80%) + (Keywords × 20%) = <strong>${fmt(s.campaign_score,'','',1)}</strong><br>
+        <strong>Step 1 — Tier 1:</strong> Weighted trend metrics ÷ 1.10 = <strong>${fmt(s.campaign_score,'','',1)}</strong><br>
+        <strong>Step 2 — Keywords:</strong> (Branded×50%) + (Local×50%) = <strong>${s.branded_keyword_pos&&s.local_keyword_pos?(calcScore('branded',s.branded_keyword_pos)*0.5+calcScore('local',s.local_keyword_pos)*0.5).toFixed(1):'—'}</strong><br>
+        <strong>Step 3 — Campaign:</strong> (Tier1×80%) + (Keywords×20%) = <strong>${fmt(s.campaign_score,'','',1)}</strong><br>
         <strong>Step 4 — Composite:</strong> Campaign(40%) + Delivery(25%) + Comm(20%) + Risk(15%) = <strong>${fmt(s.composite_score,'','',1)}</strong>
       </div>
     </div>
 
-    <!-- Raw metrics -->
     <div>
-      <div class="section-head">Raw metrics — this period vs prior</div>
+      <div class="section-head">Raw metrics</div>
       <div class="metrics-grid">
-        ${metricBox('Impressions', s.impressions_this?.toLocaleString(), null, null)}
-        ${metricBox('Clicks', s.clicks_this?.toLocaleString(), null, null)}
-        ${metricBox('CTR', fmt(s.ctr_this,'','%'), null, null)}
-        ${metricBox('Cost Per Lead', fmt(s.cpl_this,'$'), fmt(s.cpl_prior,'$'), s.cpl_mom_pct)}
-        ${metricBox('CPC', fmt(s.cpc_this,'$'), fmt(s.cpc_prior,'$'), s.cpc_mom_pct)}
-        ${metricBox('Conversions', s.conversions_this, s.conversions_prior, s.conv_mom_pct)}
-        ${metricBox('Conversion Rate', fmt(s.conv_rate_this,'','%'), fmt(s.conv_rate_prior,'','%'), s.cvr_mom_pct)}
-        ${metricBox('Organic Sessions', s.sessions_this?.toLocaleString(), s.sessions_prior?.toLocaleString(), s.sessions_mom_pct)}
-        ${metricBox('New Users', s.new_users_this?.toLocaleString(), s.new_users_prior?.toLocaleString(), s.new_users_mom_pct)}
-        ${metricBox('Key Events', s.key_events_this, s.key_events_prior, s.key_events_mom_pct)}
-        ${metricBox('Engagement Rate', fmt(s.engagement_rate,'','%'), null, null)}
-        ${metricBox('Ad Spend', fmt(s.spend_this,'$','',0), null, null)}
+        ${metBox('Impressions',s.impressions_this?.toLocaleString(),null,null)}
+        ${metBox('Clicks',s.clicks_this?.toLocaleString(),null,null)}
+        ${metBox('CTR',fmt(s.ctr_this,'','%'),null,null)}
+        ${metBox('Cost Per Lead',fmt(s.cpl_this,'$'),fmt(s.cpl_prior,'$'),s.cpl_mom_pct)}
+        ${metBox('CPC',fmt(s.cpc_this,'$'),fmt(s.cpc_prior,'$'),s.cpc_mom_pct)}
+        ${metBox('Conversions',s.conversions_this,s.conversions_prior,s.conv_mom_pct)}
+        ${metBox('Conv Rate',fmt(s.conv_rate_this,'','%'),fmt(s.conv_rate_prior,'','%'),s.cvr_mom_pct)}
+        ${metBox('Sessions',s.sessions_this?.toLocaleString(),s.sessions_prior?.toLocaleString(),s.sessions_mom_pct)}
+        ${metBox('New Users',s.new_users_this?.toLocaleString(),s.new_users_prior?.toLocaleString(),s.new_users_mom_pct)}
+        ${metBox('Key Events',s.key_events_this,s.key_events_prior,s.key_events_mom_pct)}
+        ${metBox('Engagement Rate',fmt(s.engagement_rate,'','%'),null,null)}
+        ${metBox('Ad Spend',fmt(s.spend_this,'$','',0),null,null)}
       </div>
     </div>
 
-    <!-- Benchmark rubric -->
     <div>
-      <div class="section-head">Benchmark rubric — ${client.industry} ${client.tier2_active ? '(Tier 2 active)' : '(Tier 1 only)'}</div>
+      <div class="section-head">Benchmark rubric — ${client.industry}</div>
       <table class="rubric-table">
         <thead><tr><th>Metric</th><th class="th-red">Red (0–59)</th><th class="th-yellow">Yellow (60–79)</th><th class="th-green">Green (80–100)</th><th>This client</th></tr></thead>
         <tbody>
-          <tr><td>MoM CPL Change <span class="tier-badge">T1</span></td><td class="cell-red">Up 25%+</td><td class="cell-yellow">Up 10–24%</td><td class="cell-green">Stable or down</td><td>${fmtMoM(s.cpl_mom_pct)}</td></tr>
-          <tr><td>MoM CPC Change <span class="tier-badge">T1</span></td><td class="cell-red">Up 30%+</td><td class="cell-yellow">Up 15–29%</td><td class="cell-green">Stable or down</td><td>${fmtMoM(s.cpc_mom_pct)}</td></tr>
-          <tr><td>Budget Pacing <span class="tier-badge">T1</span></td><td class="cell-red">&lt;70% or &gt;115%</td><td class="cell-yellow">70–79% or 111–115%</td><td class="cell-green">80–110%</td><td>${fmt(s.budget_pacing_pct,'','%') ?? '—'}</td></tr>
+          <tr><td>MoM CPL <span class="tier-badge">T1</span></td><td class="cell-red">Up 25%+</td><td class="cell-yellow">Up 10–24%</td><td class="cell-green">Stable or down</td><td>${fmtMoM(s.cpl_mom_pct)}</td></tr>
           <tr><td>MoM Conversions <span class="tier-badge">T1</span></td><td class="cell-red">Down 20%+</td><td class="cell-yellow">Down 5–19%</td><td class="cell-green">Flat or up</td><td>${fmtMoM(s.conv_mom_pct)}</td></tr>
-          <tr><td>Zero Conv Days <span class="tier-badge">T1</span></td><td class="cell-red">8+ days</td><td class="cell-yellow">4–7 days</td><td class="cell-green">0–3 days</td><td>${s.zero_conv_days !== null ? s.zero_conv_days + ' days' : '—'}</td></tr>
           <tr><td>Engagement Rate <span class="tier-badge">T1</span></td><td class="cell-red">Below 50%</td><td class="cell-yellow">50–64%</td><td class="cell-green">65%+</td><td>${fmt(s.engagement_rate,'','%')}</td></tr>
-          <tr><td>Branded Keywords <span class="tier-badge">T1</span></td><td class="cell-red">Position 10+</td><td class="cell-yellow">Position 4–9</td><td class="cell-green">Position 1–3</td><td>${s.branded_keyword_pos ? 'Position ' + s.branded_keyword_pos : '—'}</td></tr>
-          <tr><td>Local Keywords <span class="tier-badge">T1</span></td><td class="cell-red">Position 20+</td><td class="cell-yellow">Position 11–19</td><td class="cell-green">Position 1–10</td><td>${s.local_keyword_pos ? 'Position ' + s.local_keyword_pos : '—'}</td></tr>
+          <tr><td>Overdue Tasks <span class="tier-badge">Delivery</span></td><td class="cell-red">5+ overdue</td><td class="cell-yellow">3–4 overdue</td><td class="cell-green">0–2 overdue</td><td>${asanaTasks?.overdueTasks?.length!=null?asanaTasks.overdueTasks.length+' overdue':'—'}</td></tr>
           ${bRows}
         </tbody>
       </table>
     </div>
 
-    <!-- Flags -->
     <div>
       <div class="section-head">Flags & alerts</div>
       ${flagList.length
-        ? `<div class="flags-list">${flagList.map(f => `
-            <div class="flag-item ${f.type}">
-              <span class="flag-icon">${f.type === 'danger' ? '⚠' : '!'}</span>
-              <span class="flag-msg">${f.msg}</span>
-            </div>`).join('')}</div>`
-        : '<div class="no-flags">No active flags for this period.</div>'}
+        ? `<div class="flags-list">${flagList.map(f=>`<div class="flag-item ${f.type}"><span class="flag-icon">${f.type==='danger'?'⚠':'!'}</span><span class="flag-msg">${f.msg}</span></div>`).join('')}</div>`
+        : '<div class="no-flags">No active flags.</div>'}
     </div>
 
-    <!-- Notes -->
-    ${s.notes ? `<div>
-      <div class="section-head">Notes</div>
-      <div class="notes-box">${s.notes}</div>
-    </div>` : ''}
-
+    ${s.notes?`<div><div class="section-head">Notes & history</div><div class="notes-box">${s.notes}</div></div>`:''}
   `;
 }
 
-function metricBox(label, thisVal, priorVal, momPct) {
-  const momHtml = momPct !== null && momPct !== undefined ? `<div class="metric-box-mom">${fmtMoM(momPct)}</div>` : '';
-  const priorHtml = priorVal ? `<div class="metric-box-prior">Prior: ${priorVal}</div>` : '';
+function buildAsanaSection(asanaTasks, deliveryScore) {
+  const hasData = asanaTasks && !asanaTasks.error && asanaTasks.totalTasks > 0;
+
+  const statsHtml = hasData ? `
+    <div class="delivery-stats">
+      <div class="delivery-stat"><div class="delivery-stat-val val-green">${asanaTasks.completedOnTime}</div><div class="delivery-stat-label">On Time</div></div>
+      <div class="delivery-stat"><div class="delivery-stat-val val-yellow">${asanaTasks.completedLate||0}</div><div class="delivery-stat-label">Late</div></div>
+      <div class="delivery-stat"><div class="delivery-stat-val val-red">${asanaTasks.overdueTasks?.length||0}</div><div class="delivery-stat-label">Overdue</div></div>
+      <div class="delivery-stat"><div class="delivery-stat-val val-yellow">${asanaTasks.upcomingTasks?.length||0}</div><div class="delivery-stat-label">Upcoming</div></div>
+    </div>` : '';
+
+  const allTasks = hasData ? [
+    ...(asanaTasks.overdueTasks||[]).map(t=>({...t,_status:'overdue'})),
+    ...(asanaTasks.upcomingTasks||[]).map(t=>({...t,_status:'upcoming'})),
+    ...(asanaTasks.completedOnTime||[]).map(t=>({...t,_status:'complete'})),
+  ] : [];
+
+  const tasksHtml = allTasks.length ? `
+    <div class="task-list">
+      ${allTasks.map(t => {
+        const dotCls = t._status==='overdue'?'task-dot-overdue':t._status==='complete'?'task-dot-complete':'task-dot-upcoming';
+        const badgeCls = t._status==='overdue'?'task-badge-overdue':t._status==='complete'?'task-badge-complete':'task-badge-upcoming';
+        const badgeLabel = t._status==='overdue'?`Overdue ${t.daysOverdue?t.daysOverdue+'d':''}`:t._status==='complete'?'Complete':'Upcoming';
+        return `
+          <div class="task-item">
+            <div class="task-status-dot ${dotCls}"></div>
+            <div class="task-name">${t.name}</div>
+            <div style="display:flex;align-items:center;gap:6px">
+              ${t.isPriority?'<span class="task-badge task-badge-priority">Priority</span>':''}
+              <span class="task-badge ${badgeCls}">${badgeLabel}</span>
+              <span class="task-due">${t.due_on||''}</span>
+            </div>
+          </div>`;
+      }).join('')}
+    </div>` : hasData ? '<div class="no-flags">No tasks found for this client in Daily Stand Up.</div>'
+    : `<div class="no-flags">${asanaTasks?.error||'Click "Sync Asana" to load task data.'}</div>`;
+
   return `
-    <div class="metric-box">
-      <div class="metric-box-label">${label}</div>
-      <div class="metric-box-this">${thisVal ?? '—'}</div>
-      ${priorHtml}
-      ${momHtml}
+    <div>
+      <div class="section-head">Delivery / Execution — Asana tasks ${deliveryScore!=null?`<span style="margin-left:auto">${scorePill(deliveryScore)}</span>`:''}</div>
+      ${statsHtml}
+      ${tasksHtml}
     </div>`;
 }
 
-// Local score calculator (mirrors server-side scoring.js)
-function calcLocalScore(type, val) {
-  if (val === null || val === undefined) return null;
+function metBox(label,thisV,priorV,momPct) {
+  const momHtml = momPct!=null?`<div class="metric-box-mom">${fmtMoM(momPct)}</div>`:'';
+  const priorHtml = priorV?`<div class="metric-box-prior">Prior: ${priorV}</div>`:'';
+  return `<div class="metric-box"><div class="metric-box-label">${label}</div><div class="metric-box-this">${thisV??'—'}</div>${priorHtml}${momHtml}</div>`;
+}
+
+function calcScore(type,val) {
+  if (val==null) return null;
   switch(type) {
-    case 'cpl':
-      if (val >= 25) return 30;
-      if (val >= 10) return Math.round(60 - ((val-10)/15)*20);
-      if (val >= 0)  return Math.round(80 + ((10-val)/10)*20);
-      return Math.min(100, Math.round(90 + Math.abs(val)*0.2));
-    case 'cpc':
-      if (val >= 30) return 30;
-      if (val >= 15) return Math.round(60 - ((val-15)/15)*20);
-      if (val >= 0)  return Math.round(80 + ((15-val)/15)*20);
-      return Math.min(100, Math.round(90 + Math.abs(val)*0.15));
-    case 'pacing':
-      if (val < 70 || val > 115) return 35;
-      if (val < 80 || val > 110) return 65;
-      return 90;
-    case 'convMoM':
-      if (val <= -20) return 30;
-      if (val <= -5)  return Math.round(60 - ((val+5)/15)*20);
-      if (val <= 0)   return Math.round(75 + ((val+5)/5)*5);
-      return Math.min(100, Math.round(80 + val*0.1));
-    case 'zeroConv':
-      if (val >= 8) return 35; if (val >= 4) return 65; return 88;
-    case 'cvrMoM':
-      if (val <= -20) return 30; if (val <= -5) return 65;
-      if (val <= 0)  return 78;
-      return Math.min(100, Math.round(82 + val*0.06));
-    case 'sessions': case 'newUsers':
-      if (val <= -10) return 35;
-      if (val < 0)   return Math.round(60 + ((val+10)/10)*20);
-      return Math.min(100, Math.round(80 + val*0.5));
-    case 'engRate':
-      if (val < 50) return 35;
-      if (val < 65) return Math.round(60 + ((val-50)/15)*20);
-      return Math.min(100, Math.round(80 + ((val-65)/35)*20));
-    case 'branded':
-      if (val <= 3) return 95; if (val <= 9) return 70; return 35;
-    case 'local':
-      if (val <= 10) return 90; if (val <= 19) return 70;
-      return Math.max(10, Math.round(55-(val-20)*0.3));
+    case 'cpl':    return val>=25?30:val>=10?Math.round(60-((val-10)/15)*20):val>=0?Math.round(80+((10-val)/10)*20):Math.min(100,Math.round(90+Math.abs(val)*0.2));
+    case 'cpc':    return val>=30?30:val>=15?Math.round(60-((val-15)/15)*20):val>=0?Math.round(80+((15-val)/15)*20):Math.min(100,Math.round(90+Math.abs(val)*0.15));
+    case 'pacing': return val<70||val>115?35:val<80||val>110?65:90;
+    case 'convMoM':return val<=-20?30:val<=-5?Math.round(60-((val+5)/15)*20):val<=0?Math.round(75+((val+5)/5)*5):Math.min(100,Math.round(80+val*0.1));
+    case 'zeroConv':return val>=8?35:val>=4?65:88;
+    case 'cvrMoM': return val<=-20?30:val<=-5?65:val<=0?78:Math.min(100,Math.round(82+val*0.06));
+    case 'sessions':case 'newUsers': return val<=-10?35:val<0?Math.round(60+((val+10)/10)*20):Math.min(100,Math.round(80+val*0.5));
+    case 'engRate': return val<50?35:val<65?Math.round(60+((val-50)/15)*20):Math.min(100,Math.round(80+((val-65)/35)*20));
+    case 'branded': return val<=3?95:val<=9?70:35;
+    case 'local':   return val<=10?90:val<=19?70:Math.max(10,Math.round(55-(val-20)*0.3));
     default: return null;
   }
 }
 
-function closeModal() {
-  document.getElementById('modal-overlay').classList.remove('open');
-}
-function closeModalOnOverlay(e) {
-  if (e.target === document.getElementById('modal-overlay')) closeModal();
-}
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); }
+function closeModalOnOverlay(e) { if(e.target===document.getElementById('modal-overlay')) closeModal(); }
+document.addEventListener('keydown', e => { if(e.key==='Escape') closeModal(); });
 
 loadClients();
 </script>

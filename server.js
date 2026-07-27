@@ -3,6 +3,7 @@ const express = require('express');
 const cors    = require('cors');
 const path    = require('path');
 const api     = require('./routes/api');
+const asana   = require('./routes/asana');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -10,9 +11,11 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
-app.use('/api', api);
 
-// Catch-all — serve frontend for any non-API route
+app.use('/api', api);
+app.use('/api/asana', asana);
+
+// Catch-all — serve frontend
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });

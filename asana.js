@@ -102,6 +102,18 @@ function scoreDelivery(tasks, scoringDate = new Date()) {
   const today = new Date(scoringDate);
   today.setHours(0, 0, 0, 0);
 
+
+  // Filter to current scoring period (last 60 days)
+  // Prevents old historical tasks from affecting the score
+  const cutoff = new Date(today);
+  cutoff.setDate(cutoff.getDate() - 60);
+  tasks = tasks.filter(t => {
+    if (!t.completed) return true;
+    if (!t.completed_at) return false;
+    return new Date(t.completed_at) >= cutoff;
+  });
+  if (tasks.length === 0) return { score: 100, totalTasks: 0, completedOnTime: 0, completedLate: [], overdueTasks: [], upcomingTasks: [], flags: [], summary: "No tasks in current period" };
+
   const overdueTasks = [], completedOnTime = [], completedLate = [], upcomingTasks = [], flags = [];
 
   for (const task of tasks) {

@@ -175,6 +175,20 @@ async function getClientDeliveryScore(wGid, clientName) {
   }
 }
 
+
+// ── Get delivery score by explicit project name ───────────────────────────────
+async function getClientDeliveryScoreByProject(wGid, projectName) {
+  try {
+    const project = await findProject(wGid, projectName);
+    if (!project) return { score: null, error: `Project not found: "${projectName}"`, tasks: [], source: null };
+    const tasks = await getTasksInProject(project.gid);
+    return { ...scoreDelivery(tasks), source: project.name, projectName: project.name, projectGid: project.gid };
+  } catch (err) {
+    console.error("getClientDeliveryScoreByProject error:", err.message);
+    return { score: null, error: err.message, tasks: [] };
+  }
+}
+
 // ── All clients from Daily Stand Up ──────────────────────────────────────────
 async function getAllClientsDelivery(wGid) {
   const dailyStandUp = await findProject(wGid, 'Daily Stand Up');
@@ -219,6 +233,6 @@ module.exports = {
   getWorkspaces, getProjects, getSections,
   getTasksInSection, getTasksInProject, findProject,
   scoreDelivery, getClientDeliveryScore,
-  getAllClientsDelivery, getTestProjectTasks,
+  getAllClientsDelivery, getClientDeliveryScoreByProject, getTestProjectTasks,
   parseClientFromTask,
 };

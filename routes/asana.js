@@ -9,7 +9,6 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false },
 });
 
-// Cache workspace GID
 let cachedWorkspaceGid = null;
 async function getWorkspaceGid() {
   if (cachedWorkspaceGid) return cachedWorkspaceGid;
@@ -20,14 +19,12 @@ async function getWorkspaceGid() {
 }
 
 // ── GET /api/asana/debug ──────────────────────────────────────────────────────
-// Shows token status without exposing the actual value
 router.get('/debug', (req, res) => {
   const token = process.env.ASANA_TOKEN;
   res.json({
     token_set:    !!token,
     token_length: token ? token.length : 0,
     token_prefix: token ? token.substring(0, 6) + '...' : 'NOT SET',
-    node_env:     process.env.NODE_ENV || 'not set',
   });
 });
 
@@ -86,30 +83,41 @@ router.get('/all', async (req, res) => {
 router.post('/sync', async (req, res) => {
   try {
     const wGid    = await getWorkspaceGid();
-    const clients = await pool.query('SELECT id, name FROM clients');
+    const clients = await pool.query('SELECT id, name, asana_project_name FROM clients');
     const updated = [];
     const errors  = [];
 
     for (const client of clients.rows) {
-      const delivery = await asana.getClientDeliveryScore(wGid, client.name);
+      let delivery;
+
+      // If client has an explicit asana_project_name, use that directly
+      if (client.asana_project_name) {
+        console.log(`${client.name}: using explicit project "${client.asana_project_name}"`);
+        delivery = await asana.getClientDeliveryScoreByProject(wGid, client.asana_project_name);
+      } else {
+        // Otherwise fall back to name matching
+        delivery = await asana.getClientDeliveryScore(wGid, client.name);
+      }
 
       if (!delivery || delivery.score === null) {
         errors.push(`${client.name}: ${delivery?.error || 'No tasks found'}`);
         continue;
       }
 
+      // Get latest score row
       const latest = await pool.query(
         'SELECT id, composite_score, campaign_score, communication_score, risk_score, flags, notes FROM scores WHERE client_id = $1 ORDER BY period_start DESC LIMIT 1',
         [client.id]
       );
 
       if (latest.rows.length === 0) {
-        errors.push(`${client.name}: No score record found`);
+        errors.push(`${client.name}: No score record found — add TapClicks data first`);
         continue;
       }
 
-      const s = latest.rows[0];
-      const scoring      = require('../scoring');
+      const s       = latest.rows[0];
+      const scoring = require('../scoring');
+
       const newComposite = scoring.calcCompositeScore({
         campaignScore:      s.campaign_score,
         deliveryScore:      delivery.score,
@@ -141,7 +149,7 @@ router.post('/sync', async (req, res) => {
 
       updated.push({
         client:        client.name,
-        source:        delivery.source,
+        source:        delivery.source || delivery.projectName,
         deliveryScore: delivery.score,
         composite:     newComposite,
         status:        scoring.getStatus(newComposite),

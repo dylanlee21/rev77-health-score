@@ -365,23 +365,15 @@ async function openModal(clientId) {
   document.getElementById('modal-name').textContent = '...';
   document.getElementById('modal-score').textContent = '—';
 
-  // Fetch client detail + Asana tasks in parallel
-  const [detailRes, asanaRes] = await Promise.allSettled([
-    fetch(`/api/clients/${clientId}`).then(r=>r.json()),
-    fetch(`/api/asana/client/${encodeURIComponent('')}`).then(r=>r.json()).catch(()=>null),
-  ]);
-
-  const detail = detailRes.status==='fulfilled' ? detailRes.value : null;
-  if (!detail) { document.getElementById('modal-body').innerHTML='<div class="loading">Failed to load.</div>'; return; }
-
-  // Fetch Asana tasks for this client
-  let asanaTasks = null;
+  // Read from DB only — Asana data is synced via the Sync button
+  // No live Asana API call here to keep the modal fast
   try {
-    const ar = await fetch(`/api/asana/client/${encodeURIComponent(detail.client.name)}`);
-    asanaTasks = await ar.json();
-  } catch(e) { asanaTasks = null; }
-
-  renderModal(detail, asanaTasks);
+    const detail = await fetch(`/api/clients/${clientId}`).then(r => r.json());
+    if (!detail) { document.getElementById('modal-body').innerHTML='<div class="loading">Failed to load.</div>'; return; }
+    renderModal(detail, null);
+  } catch(e) {
+    document.getElementById('modal-body').innerHTML='<div class="loading">Failed to load client.</div>';
+  }
 }
 
 function renderModal({ client, score, benchmark }, asanaTasks) {

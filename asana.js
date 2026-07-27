@@ -3,11 +3,13 @@
 
 const https = require('https');
 
-const ASANA_BASE  = 'api.asana.com';
-const ASANA_TOKEN = process.env.ASANA_TOKEN;
+const ASANA_BASE = 'api.asana.com';
 
 // ── Core HTTP helper ──────────────────────────────────────────────────────────
 function asanaGet(path) {
+  const ASANA_TOKEN = process.env.ASANA_TOKEN; // read fresh every request
+  if (!ASANA_TOKEN) throw new Error('ASANA_TOKEN environment variable is not set');
+
   return new Promise((resolve, reject) => {
     const options = {
       hostname: ASANA_BASE,

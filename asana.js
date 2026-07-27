@@ -3,10 +3,11 @@ const https = require('https');
 
 const ASANA_BASE = 'api.asana.com';
 
-// ── Core HTTP helper ──────────────────────────────────────────────────────────
-function asanaGet(path) {
+// ── Core HTTP helper (follows redirects) ─────────────────────────────────────
+function asanaGet(path, redirectCount = 0) {
   const ASANA_TOKEN = process.env.ASANA_TOKEN;
   if (!ASANA_TOKEN) throw new Error('ASANA_TOKEN not set');
+  if (redirectCount > 5) throw new Error('Too many redirects from Asana API');
 
   return new Promise((resolve, reject) => {
     const options = {
@@ -20,6 +21,20 @@ function asanaGet(path) {
     };
 
     const req = https.request(options, (res) => {
+      // Follow redirects (307, 301, 302, 303, 308)
+      if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location) {
+        console.log(`Asana redirect [${res.statusCode}] to: ${res.headers.location}`);
+        // Extract just the path from the redirect URL
+        try {
+          const redirectUrl  = new URL(res.headers.location);
+          const redirectPath = redirectUrl.pathname.replace('/api/1.0', '') + redirectUrl.search;
+          resolve(asanaGet(redirectPath, redirectCount + 1));
+        } catch (e) {
+          reject(new Error(`Failed to parse redirect URL: ${res.headers.location}`));
+        }
+        return;
+      }
+
       let data = '';
       res.on('data', chunk => data += chunk);
       res.on('end', () => {
@@ -33,7 +48,7 @@ function asanaGet(path) {
           if (parsed.errors) reject(new Error(parsed.errors[0].message));
           else resolve(parsed.data);
         } catch (e) {
-          console.error('JSON parse error. Raw response:', data.substring(0, 200));
+          console.error('JSON parse error. Raw:', data.substring(0, 200));
           reject(new Error(`JSON parse failed: ${e.message}. Raw: ${data.substring(0, 100)}`));
         }
       });

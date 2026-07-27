@@ -9,7 +9,7 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false },
 });
 
-// ── Helper: get workspace GID ─────────────────────────────────────────────────
+// Cache workspace GID
 let cachedWorkspaceGid = null;
 async function getWorkspaceGid() {
   if (cachedWorkspaceGid) return cachedWorkspaceGid;
@@ -20,18 +20,13 @@ async function getWorkspaceGid() {
 }
 
 // ── GET /api/asana/test ───────────────────────────────────────────────────────
-// Validates connection and returns Test Project 5.2 data
+// Validates connection using Test Project 5.2
 router.get('/test', async (req, res) => {
   try {
-    const workspaceGid = await getWorkspaceGid();
-    const result = await asana.getTestProjectTasks(workspaceGid);
-    res.json({
-      connected: true,
-      workspace: workspaceGid,
-      ...result,
-    });
+    const wGid   = await getWorkspaceGid();
+    const result = await asana.getTestProjectTasks(wGid);
+    res.json({ connected: true, workspace: wGid, ...result });
   } catch (err) {
-    console.error('Asana test error:', err.message);
     res.status(500).json({ connected: false, error: err.message });
   }
 });
@@ -39,8 +34,7 @@ router.get('/test', async (req, res) => {
 // ── GET /api/asana/workspaces ─────────────────────────────────────────────────
 router.get('/workspaces', async (req, res) => {
   try {
-    const workspaces = await asana.getWorkspaces();
-    res.json(workspaces);
+    res.json(await asana.getWorkspaces());
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -49,23 +43,20 @@ router.get('/workspaces', async (req, res) => {
 // ── GET /api/asana/projects ───────────────────────────────────────────────────
 router.get('/projects', async (req, res) => {
   try {
-    const workspaceGid = await getWorkspaceGid();
-    const projects = await asana.getProjects(workspaceGid);
-    res.json(projects);
+    const wGid = await getWorkspaceGid();
+    res.json(await asana.getProjects(wGid));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// ── GET /api/asana/client/:clientName ─────────────────────────────────────────
+// ── GET /api/asana/client/:clientName ────────────────────────────────────────
 // Get delivery score for a specific client
+// Checks Daily Stand Up section first, falls back to standalone project
 router.get('/client/:clientName', async (req, res) => {
   try {
-    const workspaceGid = await getWorkspaceGid();
-    const result = await asana.getClientDeliveryScore(
-      workspaceGid,
-      req.params.clientName
-    );
+    const wGid   = await getWorkspaceGid();
+    const result = await asana.getClientDeliveryScore(wGid, req.params.clientName);
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -73,60 +64,50 @@ router.get('/client/:clientName', async (req, res) => {
 });
 
 // ── GET /api/asana/all ────────────────────────────────────────────────────────
-// Get delivery scores for all clients in Daily Stand Up
+// All sections from Daily Stand Up
 router.get('/all', async (req, res) => {
   try {
-    const workspaceGid = await getWorkspaceGid();
-    const results = await asana.getAllClientsDelivery(workspaceGid);
-    res.json(results);
+    const wGid = await getWorkspaceGid();
+    res.json(await asana.getAllClientsDelivery(wGid));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
 // ── POST /api/asana/sync ──────────────────────────────────────────────────────
-// Syncs Asana delivery scores into the database for all clients
+// Syncs Asana delivery scores into the DB for every client
+// For each client: checks Daily Stand Up section first, falls back to standalone project
 router.post('/sync', async (req, res) => {
   try {
-    const workspaceGid = await getWorkspaceGid();
-    const allDelivery  = await asana.getAllClientsDelivery(workspaceGid);
-    const clients      = await pool.query('SELECT id, name FROM clients');
-    const updated      = [];
-    const errors       = [];
+    const wGid   = await getWorkspaceGid();
+    const clients = await pool.query('SELECT id, name FROM clients');
+    const updated = [];
+    const errors  = [];
 
     for (const client of clients.rows) {
-      // Try to match client name to Asana section
-      const matchKey = Object.keys(allDelivery).find(sectionName =>
-        sectionName.toLowerCase().includes(client.name.toLowerCase()) ||
-        client.name.toLowerCase().includes(sectionName.toLowerCase())
-      );
+      // Use the fallback-aware lookup for every client
+      const delivery = await asana.getClientDeliveryScore(wGid, client.name);
 
-      if (!matchKey) {
-        errors.push(`No Asana section found for: ${client.name}`);
-        continue;
-      }
-
-      const delivery = allDelivery[matchKey];
-      if (delivery.score === null) {
-        errors.push(`No tasks found for: ${client.name}`);
+      if (!delivery || delivery.score === null) {
+        errors.push(`${client.name}: ${delivery?.error || 'No tasks found'}`);
         continue;
       }
 
       // Get latest score row for this client
-      const latestScore = await pool.query(
-        'SELECT id, composite_score, campaign_score, communication_score, risk_score, flags FROM scores WHERE client_id = $1 ORDER BY period_start DESC LIMIT 1',
+      const latest = await pool.query(
+        'SELECT id, composite_score, campaign_score, communication_score, risk_score, flags, notes FROM scores WHERE client_id = $1 ORDER BY period_start DESC LIMIT 1',
         [client.id]
       );
 
-      if (latestScore.rows.length === 0) {
-        errors.push(`No score record found for: ${client.name}`);
+      if (latest.rows.length === 0) {
+        errors.push(`${client.name}: No score record found — add TapClicks data first`);
         continue;
       }
 
-      const s = latestScore.rows[0];
+      const s = latest.rows[0];
 
-      // Recalculate composite with delivery score
-      const scoring = require('../scoring');
+      // Recalculate composite with new delivery score
+      const scoring      = require('../scoring');
       const newComposite = scoring.calcCompositeScore({
         campaignScore:      s.campaign_score,
         deliveryScore:      delivery.score,
@@ -134,27 +115,26 @@ router.post('/sync', async (req, res) => {
         riskScore:          s.risk_score,
       });
 
-      // Build updated flags
-      const existingFlags = s.flags || '';
-      const deliveryFlags = delivery.flags.join(' | ');
-      const allFlags = [existingFlags, deliveryFlags].filter(Boolean).join(' | ');
+      // Merge flags
+      const existingFlags = (s.flags || '').split(' | ').filter(Boolean);
+      const newFlags      = delivery.flags.filter(f => !existingFlags.includes(f));
+      const allFlags      = [...existingFlags, ...newFlags].join(' | ');
 
       // Build history note for overdue tasks
       const historyNote = delivery.overdueTasks.length > 0
-        ? `Asana sync: ${delivery.overdueTasks.length} overdue task(s) — ${delivery.overdueTasks.map(t => `"${t.name}"`).join(', ')}`
+        ? `[Asana sync ${new Date().toLocaleDateString()}] ${delivery.overdueTasks.length} overdue: ${delivery.overdueTasks.map(t => `"${t.name}"`).join(', ')}`
         : null;
 
-      // Update score record
       await pool.query(
         `UPDATE scores SET
-          delivery_score   = $1,
-          composite_score  = $2,
-          status           = $3,
-          flags            = $4,
-          notes            = CASE WHEN $5::text IS NOT NULL
-                              THEN COALESCE(notes, '') || E'\n' || $5
-                              ELSE notes END,
-          updated_at       = NOW()
+          delivery_score  = $1,
+          composite_score = $2,
+          status          = $3,
+          flags           = $4,
+          notes           = CASE WHEN $5::text IS NOT NULL
+                            THEN COALESCE(notes, '') || E'\n' || $5
+                            ELSE notes END,
+          updated_at      = NOW()
         WHERE id = $6`,
         [
           delivery.score,
@@ -168,19 +148,16 @@ router.post('/sync', async (req, res) => {
 
       updated.push({
         client:        client.name,
+        source:        delivery.source,
         deliveryScore: delivery.score,
         composite:     newComposite,
+        status:        scoring.getStatus(newComposite),
         overdue:       delivery.overdueTasks.length,
         summary:       delivery.summary,
       });
     }
 
-    res.json({
-      success: true,
-      updated,
-      errors,
-      syncedAt: new Date().toISOString(),
-    });
+    res.json({ success: true, updated, errors, syncedAt: new Date().toISOString() });
 
   } catch (err) {
     console.error('Asana sync error:', err.message);

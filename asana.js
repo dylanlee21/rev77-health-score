@@ -1,18 +1,16 @@
 // REV77 — Asana Integration
 const https = require('https');
 
-const ASANA_BASE = 'api.asana.com';
-
-// ── Core HTTP helper (follows redirects) ─────────────────────────────────────
-function asanaGet(path, redirectCount = 0) {
+// ── Core HTTP helper — follows redirects across hosts ─────────────────────────
+function asanaRequest(hostname, path, redirectCount = 0) {
   const ASANA_TOKEN = process.env.ASANA_TOKEN;
-  if (!ASANA_TOKEN) throw new Error('ASANA_TOKEN not set');
-  if (redirectCount > 5) throw new Error('Too many redirects from Asana API');
+  if (!ASANA_TOKEN) return Promise.reject(new Error('ASANA_TOKEN not set'));
+  if (redirectCount > 5) return Promise.reject(new Error('Too many redirects'));
 
   return new Promise((resolve, reject) => {
     const options = {
-      hostname: ASANA_BASE,
-      path: `/api/1.0${path}`,
+      hostname,
+      path,
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${ASANA_TOKEN}`,
@@ -21,26 +19,26 @@ function asanaGet(path, redirectCount = 0) {
     };
 
     const req = https.request(options, (res) => {
-      // Follow redirects (307, 301, 302, 303, 308)
+      // Follow any redirect
       if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location) {
-        console.log(`Asana redirect [${res.statusCode}] to: ${res.headers.location}`);
-        // Extract just the path from the redirect URL
+        console.log(`Asana redirect [${res.statusCode}] → ${res.headers.location}`);
         try {
-          const redirectUrl  = new URL(res.headers.location);
-          const redirectPath = redirectUrl.pathname.replace('/api/1.0', '') + redirectUrl.search;
-          resolve(asanaGet(redirectPath, redirectCount + 1));
+          const url = new URL(res.headers.location);
+          resolve(asanaRequest(url.hostname, url.pathname + url.search, redirectCount + 1));
         } catch (e) {
-          reject(new Error(`Failed to parse redirect URL: ${res.headers.location}`));
+          reject(new Error(`Bad redirect URL: ${res.headers.location}`));
         }
+        // Drain response body
+        res.resume();
         return;
       }
 
       let data = '';
       res.on('data', chunk => data += chunk);
       res.on('end', () => {
-        console.log(`Asana API [${res.statusCode}] ${path} — body length: ${data.length}`);
-        if (data.length === 0) {
-          reject(new Error(`Asana returned empty response for ${path} (HTTP ${res.statusCode})`));
+        console.log(`Asana [${res.statusCode}] ${hostname}${path} — ${data.length} bytes`);
+        if (!data) {
+          reject(new Error(`Empty response from Asana (HTTP ${res.statusCode})`));
           return;
         }
         try {
@@ -48,18 +46,20 @@ function asanaGet(path, redirectCount = 0) {
           if (parsed.errors) reject(new Error(parsed.errors[0].message));
           else resolve(parsed.data);
         } catch (e) {
-          console.error('JSON parse error. Raw:', data.substring(0, 200));
-          reject(new Error(`JSON parse failed: ${e.message}. Raw: ${data.substring(0, 100)}`));
+          console.error('Parse error. Raw:', data.substring(0, 300));
+          reject(new Error(`JSON parse failed: ${e.message}`));
         }
       });
     });
 
-    req.on('error', (e) => {
-      console.error('Asana request error:', e.message);
-      reject(e);
-    });
+    req.on('error', reject);
     req.end();
   });
+}
+
+// ── Public API helper — always starts at api.asana.com ───────────────────────
+function asanaGet(path) {
+  return asanaRequest('api.asana.com', `/api/1.0${path}`);
 }
 
 // ── API helpers ───────────────────────────────────────────────────────────────
@@ -114,8 +114,8 @@ function scoreDelivery(tasks, scoringDate = new Date()) {
   score -= Math.min(overdueTasks.filter(t => t.isPriority).length * 10, 20);
   score -= Math.min(completedLate.length * 5, 20);
 
-  const dueTasks    = tasks.filter(t => t.due_on && new Date(t.due_on) <= today);
-  const onTimeCount = completedOnTime.filter(t => t.due_on && new Date(t.due_on) <= today).length;
+  const dueTasks       = tasks.filter(t => t.due_on && new Date(t.due_on) <= today);
+  const onTimeCount    = completedOnTime.filter(t => t.due_on && new Date(t.due_on) <= today).length;
   const completionRate = dueTasks.length > 0 ? onTimeCount / dueTasks.length : 1;
   if (completionRate === 1 && dueTasks.length > 0) score = Math.min(score + 5, 100);
   score = Math.max(0, Math.round(score));
@@ -139,95 +139,80 @@ function scoreDelivery(tasks, scoringDate = new Date()) {
   };
 }
 
-// ── Get delivery score for a single client ────────────────────────────────────
+// ── Get delivery score for one client ─────────────────────────────────────────
 async function getClientDeliveryScore(wGid, clientName) {
   try {
+    // 1. Try Daily Stand Up section
     const dailyStandUp = await findProject(wGid, 'Daily Stand Up');
-
     if (dailyStandUp) {
-      const sections     = await getSections(dailyStandUp.gid);
+      const sections      = await getSections(dailyStandUp.gid);
       const clientSection = sections.find(s =>
         s.name.toLowerCase().includes(clientName.toLowerCase()) ||
         clientName.toLowerCase().includes(s.name.toLowerCase())
       );
-
       if (clientSection) {
         const tasks = await getTasksInSection(clientSection.gid);
         return { ...scoreDelivery(tasks), source: 'Daily Stand Up', clientSection: clientSection.name };
       }
     }
 
-    // Fallback: standalone project
+    // 2. Fallback: standalone project
     console.log(`No section found for "${clientName}" — searching standalone projects...`);
     const allProjects    = await getProjects(wGid);
     const matchedProject = allProjects.find(p =>
       p.name.toLowerCase().includes(clientName.toLowerCase()) ||
       clientName.toLowerCase().includes(p.name.toLowerCase())
     );
-
     if (matchedProject) {
       const tasks = await getTasksInProject(matchedProject.gid);
       return { ...scoreDelivery(tasks), source: 'Standalone Project', projectName: matchedProject.name };
     }
 
     return { score: null, error: `No Asana section or project found for: "${clientName}"`, tasks: [], source: null };
-
   } catch (err) {
-    console.error('Asana getClientDeliveryScore error:', err.message);
+    console.error('getClientDeliveryScore error:', err.message);
     return { score: null, error: err.message, tasks: [] };
   }
 }
 
-// ── Get all clients from Daily Stand Up ───────────────────────────────────────
+// ── All clients from Daily Stand Up ──────────────────────────────────────────
 async function getAllClientsDelivery(wGid) {
-  try {
-    const dailyStandUp = await findProject(wGid, 'Daily Stand Up');
-    if (!dailyStandUp) throw new Error('Daily Stand Up project not found');
+  const dailyStandUp = await findProject(wGid, 'Daily Stand Up');
+  if (!dailyStandUp) throw new Error('Daily Stand Up project not found');
 
-    const sections = await getSections(dailyStandUp.gid);
-    const results  = {};
-
-    for (const section of sections) {
-      if (section.name === '(no section)') continue;
-      const tasks = await getTasksInSection(section.gid);
-      results[section.name] = { sectionGid: section.gid, ...scoreDelivery(tasks) };
-    }
-
-    return results;
-  } catch (err) {
-    console.error('Asana getAllClientsDelivery error:', err.message);
-    throw err;
+  const sections = await getSections(dailyStandUp.gid);
+  const results  = {};
+  for (const section of sections) {
+    if (section.name === '(no section)') continue;
+    const tasks = await getTasksInSection(section.gid);
+    results[section.name] = { sectionGid: section.gid, ...scoreDelivery(tasks) };
   }
+  return results;
 }
 
 // ── Test Project 5.2 ──────────────────────────────────────────────────────────
 async function getTestProjectTasks(wGid) {
-  try {
-    const testProject = await findProject(wGid, 'Test Project 5.2');
-    if (!testProject) throw new Error('Test Project 5.2 not found in workspace');
+  const testProject = await findProject(wGid, 'Test Project 5.2');
+  if (!testProject) throw new Error('Test Project 5.2 not found');
 
-    const tasks  = await getTasksInProject(testProject.gid);
-    const scored = scoreDelivery(tasks);
+  const tasks  = await getTasksInProject(testProject.gid);
+  const scored = scoreDelivery(tasks);
 
-    return {
-      projectName: testProject.name,
-      projectGid:  testProject.gid,
-      tasks: tasks.map(t => ({
-        name:         t.name,
-        due_on:       t.due_on,
-        completed:    t.completed,
-        completed_at: t.completed_at,
-        isPriority:   t.name?.toLowerCase().includes('priority'),
-        status: t.completed ? 'Completed'
-              : (t.due_on && new Date(t.due_on) < new Date()) ? 'Overdue'
-              : 'Upcoming',
-      })),
-      ...scored,
-    };
-  } catch (err) {
-    console.error('Asana getTestProjectTasks error:', err.message);
-    throw err;
-  }
+  return {
+    projectName: testProject.name,
+    projectGid:  testProject.gid,
+    tasks: tasks.map(t => ({
+      name:         t.name,
+      due_on:       t.due_on,
+      completed:    t.completed,
+      completed_at: t.completed_at,
+      isPriority:   t.name?.toLowerCase().includes('priority'),
+      status: t.completed ? 'Completed'
+            : (t.due_on && new Date(t.due_on) < new Date()) ? 'Overdue'
+            : 'Upcoming',
+    })),
+    ...scored,
+  };
 }
 
 module.exports = {

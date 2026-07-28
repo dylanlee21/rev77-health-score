@@ -534,25 +534,75 @@ function buildDeliveryTab(s) {
   const notes    = s.notes || '';
   const asanaLog = notes.split('\n').filter(l => l.includes('[Asana sync'));
 
+  // Parse stored task snapshot
+  let tasks = [];
+  try {
+    tasks = s.delivery_tasks ? (typeof s.delivery_tasks === 'string' ? JSON.parse(s.delivery_tasks) : s.delivery_tasks) : [];
+  } catch(e) { tasks = []; }
+
+  const overdue   = tasks.filter(t => t.status === 'overdue');
+  const upcoming  = tasks.filter(t => t.status === 'upcoming');
+  const completed = tasks.filter(t => t.status === 'completed');
+
+  // Build task rows
+  function taskRow(t) {
+    const isOverdue   = t.status === 'overdue';
+    const isCompleted = t.status === 'completed';
+    const dotCls      = isCompleted ? 'task-dot-complete' : isOverdue ? 'task-dot-overdue' : 'task-dot-upcoming';
+    const badgeCls    = isCompleted ? 'task-badge-complete' : isOverdue ? 'task-badge-overdue' : 'task-badge-upcoming';
+    const badgeLabel  = isCompleted ? 'Completed' : isOverdue ? `Overdue ${t.daysOverdue ? t.daysOverdue+'d' : ''}` : 'Upcoming';
+    const checkbox    = `<span style="font-size:16px;margin-right:4px">${isCompleted ? '✅' : isOverdue ? '🔴' : '⬜'}</span>`;
+    return `
+      <div class="task-item">
+        ${checkbox}
+        <div class="task-name">
+          ${t.name}
+          ${t.isPriority ? '<span class="task-badge task-badge-priority" style="margin-left:6px">Priority</span>' : ''}
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="task-due">${t.due_on ? 'Due: '+t.due_on : 'No due date'}</span>
+          <span class="task-badge ${badgeCls}">${badgeLabel}</span>
+        </div>
+      </div>`;
+  }
+
+  const taskSections = tasks.length > 0 ? `
+    <div class="section-head" style="margin-top:1.25rem">
+      Tasks this period
+      <span style="font-size:11px;color:var(--text3);font-weight:400;margin-left:8px">${tasks.length} total · ${overdue.length} overdue · ${completed.length} completed · ${upcoming.length} upcoming</span>
+    </div>
+    ${overdue.length ? `
+      <div style="margin-bottom:.5rem;font-size:11px;color:var(--red);font-weight:600;text-transform:uppercase;letter-spacing:.06em">⚠ Overdue</div>
+      <div class="task-list" style="margin-bottom:1rem">${overdue.map(taskRow).join('')}</div>` : ''}
+    ${upcoming.length ? `
+      <div style="margin-bottom:.5rem;font-size:11px;color:var(--yellow);font-weight:600;text-transform:uppercase;letter-spacing:.06em">Upcoming</div>
+      <div class="task-list" style="margin-bottom:1rem">${upcoming.map(taskRow).join('')}</div>` : ''}
+    ${completed.length ? `
+      <div style="margin-bottom:.5rem;font-size:11px;color:var(--green);font-weight:600;text-transform:uppercase;letter-spacing:.06em">Completed</div>
+      <div class="task-list">${completed.map(taskRow).join('')}</div>` : ''}
+  ` : `<div class="empty-tab">No task data yet — click <strong>Sync Asana</strong> in the header to load tasks.</div>`;
+
   document.getElementById('tab-delivery').innerHTML = `
-    <div class="section-head">Delivery score</div>
+    <div class="section-head">Score formula</div>
     <div class="formula-box">
       Score starts at 100. Deductions: −15 per overdue task (max −60), −10 per priority task overdue (max −20), −5 per late completion (max −20).
-      <br>Click <strong>Sync Asana</strong> in the header to pull the latest task data.
+      Only tasks from the last 60 days are scored.
     </div>
+
+    ${taskSections}
 
     <div class="section-head" style="margin-top:1.25rem">Benchmark rubric</div>
     <table class="rubric-table">
       <thead><tr><th>Metric</th><th class="th-red">Red (0–59)</th><th class="th-yellow">Yellow (60–79)</th><th class="th-green">Green (80–100)</th><th>This Client</th></tr></thead>
       <tbody>
-        <tr><td>Overdue Tasks</td><td class="cell-red">5+ overdue</td><td class="cell-yellow">3–4 overdue</td><td class="cell-green">0–2 overdue</td><td>${hasScore?scorePill(s.delivery_score):'—'}</td></tr>
-        <tr><td>Priority Tasks Overdue</td><td class="cell-red">Any priority overdue</td><td class="cell-yellow">—</td><td class="cell-green">None overdue</td><td>—</td></tr>
+        <tr><td>Overdue Tasks</td><td class="cell-red">5+ overdue</td><td class="cell-yellow">3–4 overdue</td><td class="cell-green">0–2 overdue</td><td>${overdue.length > 0 ? `<span class="cell-red">${overdue.length} overdue</span>` : '<span class="cell-green">0 overdue</span>'}</td></tr>
+        <tr><td>Priority Tasks Overdue</td><td class="cell-red">Any priority overdue</td><td class="cell-yellow">—</td><td class="cell-green">None overdue</td><td>${overdue.filter(t=>t.isPriority).length > 0 ? '<span class="cell-red">Yes</span>' : '<span class="cell-green">None</span>'}</td></tr>
         <tr><td>Late Completions</td><td class="cell-red">4+ completed late</td><td class="cell-yellow">2–3 completed late</td><td class="cell-green">0–1 completed late</td><td>—</td></tr>
       </tbody>
     </table>
 
     ${asanaLog.length ? `
-      <div class="section-head" style="margin-top:1.25rem">Asana sync history</div>
+      <div class="section-head" style="margin-top:1.25rem">Sync history</div>
       <div class="notes-box">${asanaLog.join('\n')}</div>` : ''}
   `;
 }

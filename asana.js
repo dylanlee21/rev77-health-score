@@ -155,7 +155,8 @@ function scoreDelivery(tasks, scoringDate = new Date()) {
   return {
     score,
     totalTasks:      tasks.length,
-    completedOnTime: completedOnTime.length,
+    completedOnTime: completedOnTime,
+    completedOnTimeCount: completedOnTime.length,
     completedLate:   completedLate.length,
     overdueTasks,
     upcomingTasks,

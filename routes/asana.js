@@ -133,6 +133,22 @@ router.post('/sync', async (req, res) => {
         ? `[Asana sync ${new Date().toLocaleDateString()}] ${delivery.overdueTasks.length} overdue: ${delivery.overdueTasks.map(t => `"${t.name}"`).join(', ')}`
         : null;
 
+      // Build task snapshot for display in modal
+      const taskSnapshot = [
+        ...(delivery.overdueTasks || []),
+        ...(delivery.upcomingTasks || []),
+        ...(delivery.completedOnTime ? (Array.isArray(delivery.completedOnTime) ? delivery.completedOnTime : []) : []),
+      ].map(t => ({
+        name:        t.name,
+        due_on:      t.due_on,
+        completed:   t.completed || false,
+        completed_at:t.completed_at || null,
+        isPriority:  t.isPriority || false,
+        daysOverdue: t.daysOverdue || null,
+        status: t.completed ? 'completed'
+              : (t.daysOverdue ? 'overdue' : 'upcoming'),
+      }));
+
       await pool.query(
         `UPDATE scores SET
           delivery_score  = $1,
@@ -142,9 +158,10 @@ router.post('/sync', async (req, res) => {
           notes           = CASE WHEN $5::text IS NOT NULL
                             THEN COALESCE(notes, '') || E'\n' || $5
                             ELSE notes END,
+          delivery_tasks  = $7,
           updated_at      = NOW()
         WHERE id = $6`,
-        [delivery.score, newComposite, scoring.getStatus(newComposite), allFlags, historyNote, s.id]
+        [delivery.score, newComposite, scoring.getStatus(newComposite), allFlags, historyNote, s.id, JSON.stringify(taskSnapshot)]
       );
 
       updated.push({

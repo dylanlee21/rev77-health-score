@@ -176,17 +176,17 @@ async function testConnection() {
 // ── Get all clients from TapClicks (paginated) ───────────────────────────────
 async function getClients() {
   let allClients = [];
-  let offset     = 0;
+  let pageNum    = 0;
   const pageSize = 100;
 
   while (true) {
-    const res     = await tapclicksGet(`/clients?page=${offset},${pageSize}&sort=company_name`);
+    const res     = await tapclicksGet(`/clients?page=${pageNum},${pageSize}&sort=company_name`);
     const batch   = Array.isArray(res.data) ? res.data : (res.data ? [res.data] : []);
     if (batch.length === 0) break;
     allClients = allClients.concat(batch);
     console.log(`TapClicks: fetched ${allClients.length} clients so far...`);
     if (batch.length < pageSize) break; // last page
-    offset += pageSize;
+    pageNum += 1; // was: offset += pageSize (wrong — "page" is a page NUMBER, not an offset)
   }
 
   return allClients; // return all statuses so we can see Tom's Mechanical

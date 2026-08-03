@@ -291,6 +291,16 @@ function getPriorMonthRange(daterange) {
   return `${fmt(priorMonthFirstDay)}|${fmt(priorMonthLastDay)}`;
 }
 
+// ── The default reporting period for automated scoring: the most recently ──
+// COMPLETED calendar month (not the current in-progress month, which would
+// unfairly compare a few partial days against a full prior month). E.g. if
+// run any day in August, this returns July — and getCampaignMetrics() will
+// automatically compare that against June via getPriorMonthRange().
+function getCurrentScoringPeriod() {
+  const todayStr = new Date().toISOString().slice(0, 10);
+  return getPriorMonthRange(`${todayStr}|${todayStr}`);
+}
+
 // ── Get normalized campaign metrics for a client from whichever service(s) ──
 // actually have their data — paid Google Ads, organic GA4, or both. Returns
 // a metrics object shaped exactly for scoring.js's calcTier1Score(), with
@@ -414,4 +424,5 @@ module.exports = {
   discoverClientServices,
   getCampaignMetrics,
   getPriorMonthRange,
+  getCurrentScoringPeriod,
 };

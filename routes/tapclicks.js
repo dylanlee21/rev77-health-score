@@ -138,7 +138,7 @@ router.get('/dataviews/:service_id', async (req, res) => {
 router.get('/client/:id/data', async (req, res) => {
   try {
     const clientId  = req.params.id;
-    const daterange = req.query.daterange || '2026-05-01|2026-05-31';
+    const daterange = req.query.daterange || tapclicks.getCurrentScoringPeriod();
     const serviceId = req.query.service_id || '137'; // default Google Ads Search
 
     // First get data views for this service
@@ -197,7 +197,7 @@ router.get('/explore/*', async (req, res) => {
 router.get('/sample/:service_id/:view', async (req, res) => {
   try {
     const { service_id, view } = req.params;
-    const daterange = req.query.daterange || '2026-05-01|2026-05-31';
+    const daterange = req.query.daterange || tapclicks.getCurrentScoringPeriod();
     const clientId  = req.query.client_id || '';
     const clientFilter = clientId ? `&customer_id=${clientId}` : ''; // was cust_id — TapClicks expects customer_id
 
@@ -232,7 +232,7 @@ router.get('/client/:id/discover', async (req, res) => {
   try {
     const clientId   = req.params.id;
     const customerId = req.query.customer_id;
-    const daterange   = req.query.daterange || '2026-05-01|2026-05-31';
+    const daterange   = req.query.daterange || tapclicks.getCurrentScoringPeriod();
 
     if (!customerId) {
       return res.status(400).json({

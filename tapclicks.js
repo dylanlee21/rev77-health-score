@@ -4,11 +4,9 @@
 const https = require('https');
 const querystring = require('querystring');
 
-// Use REV77's specific TapClicks instance
-// The global api.tapclicks.com is a different instance from rev77.tapclicks.com
-const TAPCLICKS_BASE     = 'rev77.tapclicks.com';
-const TAPCLICKS_AUTH_URL = 'https://rev77.tapclicks.com/oauth/accesstoken';
-const TAPCLICKS_REFRESH  = 'https://rev77.tapclicks.com/oauth/refresh_accesstoken';
+const TAPCLICKS_BASE     = 'api.tapclicks.com';
+const TAPCLICKS_AUTH_URL = 'https://api.tapclicks.com/oauth/accesstoken';
+const TAPCLICKS_REFRESH  = 'https://api.tapclicks.com/oauth/refresh_accesstoken';
 
 // ── Token cache (in-memory, refreshes automatically) ──────────────────────────
 let tokenCache = {

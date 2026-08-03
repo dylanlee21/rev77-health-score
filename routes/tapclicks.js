@@ -199,7 +199,7 @@ router.get('/sample/:service_id/:view', async (req, res) => {
     const { service_id, view } = req.params;
     const daterange = req.query.daterange || '2026-05-01|2026-05-31';
     const clientId  = req.query.client_id || '';
-    const clientFilter = clientId ? `&cust_id=${clientId}` : '';
+    const clientFilter = clientId ? `&customer_id=${clientId}` : ''; // was cust_id — TapClicks expects customer_id
 
     const result = await tapclicks.tapclicksGet(
       `/services/${service_id}/data/${view}?page=0,3&daterange=${daterange}&aggregate=true${clientFilter}`

@@ -192,8 +192,6 @@ router.get('/explore/*', async (req, res) => {
   }
 });
 
-module.exports = router;
-
 // ── GET /api/tapclicks/sample/:service_id/:view ───────────────────────────────
 // Pull a small sample of raw data to see field names
 router.get('/sample/:service_id/:view', async (req, res) => {
@@ -221,3 +219,52 @@ router.get('/sample/:service_id/:view', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// ── GET /api/tapclicks/client/:id/discover ────────────────────────────────────
+// Finds which TapClicks services actually have data for this client (rather
+// than assuming service_id 137 / Google Ads Search for everyone), and saves
+// the result to the clients table so future scoring runs don't re-guess.
+const CANDIDATE_SERVICE_IDS = [34, 136, 137, 276, 63, 184];
+// 34 = Google Ads, 136 = Google Ads Display, 137 = Google Ads Search,
+// 276 = Google Analytics 4, 63 = Google Search Console, 184 = Google Business Profile
+
+router.get('/client/:id/discover', async (req, res) => {
+  try {
+    const clientId   = req.params.id;
+    const customerId = req.query.customer_id;
+    const daterange   = req.query.daterange || '2026-05-01|2026-05-31';
+
+    if (!customerId) {
+      return res.status(400).json({
+        error: 'customer_id query param is required (the TapClicks customer/client id, e.g. 122 for Tom\'s Mechanical)',
+      });
+    }
+
+    const discovery          = await tapclicks.discoverClientServices(customerId, CANDIDATE_SERVICE_IDS, daterange);
+    const connectedServices  = discovery.filter(d => d.has_data);
+
+    // Cache the result on the client record so scoring doesn't have to
+    // re-discover this on every run.
+    await pool.query(
+      `UPDATE clients
+       SET tapclicks_service_ids = $1, tapclicks_discovered_at = NOW()
+       WHERE id = $2`,
+      [
+        JSON.stringify(connectedServices.map(d => ({ service_id: d.service_id, view: d.matched_view }))),
+        clientId,
+      ]
+    );
+
+    res.json({
+      client_id:          clientId,
+      customer_id:        customerId,
+      daterange,
+      discovery,                 // full detail — every candidate service checked, and why
+      connected_services: connectedServices, // just the ones that actually had data
+    });
+  } catch(err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+module.exports = router;

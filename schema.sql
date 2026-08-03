@@ -154,3 +154,11 @@ INSERT INTO scores (
   'Pilot client — first scored month. Strong paid search recovery from April.',
   'CPC up +38.9% MoM (Red trigger) | 15 zero-conv days | Arlington keywords ranking 90-230'
 );
+
+-- ── Migration: TapClicks service discovery cache ───────────────────────────
+-- Stores which TapClicks services actually have data for each client, so the
+-- scoring engine doesn't have to hardcode/guess a service_id (see the
+-- discoverClientServices() function in tapclicks.js). Populate by hitting
+-- GET /api/tapclicks/client/:id/discover?customer_id=<tapclicks_customer_id>
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS tapclicks_service_ids JSONB;
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS tapclicks_discovered_at TIMESTAMP;

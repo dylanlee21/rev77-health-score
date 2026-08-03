@@ -207,6 +207,56 @@ async function findClient(name) {
   ) || null;
 }
 
+// ── Discover which TapClicks services actually have data for a given client ──
+// Some clients aren't wired to every service (e.g. a client may have Google
+// Ads Search but not Display, or no paid ads at all — just GA4/GBP/Search
+// Console). Rather than hardcoding a service_id and view, this checks each
+// candidate service's real data views and tests whether the given customer_id
+// has any rows in any of them, for the given date range.
+async function discoverClientServices(customerId, candidateServiceIds, daterange) {
+  const results = [];
+
+  for (const serviceId of candidateServiceIds) {
+    const entry = {
+      service_id:    serviceId,
+      views_checked: [],
+      has_data:      false,
+      matched_view:  null,
+      error:         null,
+    };
+
+    try {
+      const dvResult   = await tapclicksGet(`/services/${serviceId}/data/data_views`);
+      const dataViews  = Array.isArray(dvResult.data) ? dvResult.data : [];
+      const viewsToTry = dataViews.length > 0
+        ? dataViews.map(dv => dv.id || dv.data_view_id || dv)
+        : ['cgn']; // fallback if the data_views lookup itself returns nothing
+
+      for (const view of viewsToTry) {
+        entry.views_checked.push(view);
+        try {
+          const raw = await tapclicksGet(
+            `/services/${serviceId}/data/${view}?page=0,1&daterange=${daterange}&customer_id=${customerId}`
+          );
+          if (Array.isArray(raw.data) && raw.data.length > 0) {
+            entry.has_data     = true;
+            entry.matched_view = view;
+            break; // found data for this service — no need to check remaining views
+          }
+        } catch (e) {
+          // this view may not support this filter combo — skip and keep trying others
+        }
+      }
+    } catch (e) {
+      entry.error = e.message;
+    }
+
+    results.push(entry);
+  }
+
+  return results;
+}
+
 module.exports = {
   getAccessToken,
   tapclicksGet,
@@ -216,4 +266,5 @@ module.exports = {
   getClients,
   getChannels,
   findClient,
+  discoverClientServices,
 };

@@ -107,33 +107,72 @@ router.get('/services/all', async (req, res) => {
   }
 });
 
+// ── GET /api/tapclicks/metadata/:service_id ──────────────────────────────────
+// Get available fields for a service
+router.get('/metadata/:service_id', async (req, res) => {
+  try {
+    const result = await tapclicks.tapclicksGet(
+      `/services/${req.params.service_id}/data/cgn?metadata=1`
+    );
+    res.json(result);
+  } catch(err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── GET /api/tapclicks/dataviews/:service_id ──────────────────────────────────
+// Get data view IDs for a service
+router.get('/dataviews/:service_id', async (req, res) => {
+  try {
+    const result = await tapclicks.tapclicksGet(
+      `/services/${req.params.service_id}/data/data_views`
+    );
+    res.json(result);
+  } catch(err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── GET /api/tapclicks/client/:id/data ───────────────────────────────────────
-// Try to pull data for a specific client across all services
+// Pull data for a specific client from key services
 router.get('/client/:id/data', async (req, res) => {
   try {
     const clientId  = req.params.id;
     const daterange = req.query.daterange || '2026-05-01|2026-05-31';
+    const serviceId = req.query.service_id || '137'; // default Google Ads Search
 
-    // Get connected services first
-    const svcResult  = await tapclicks.tapclicksGet('/services?page=0,200');
-    const services   = Array.isArray(svcResult.data) ? svcResult.data : [];
-    const connected  = services.filter(s => s.is_connected === true || s.is_connected === 1);
+    // First get data views for this service
+    const dvResult = await tapclicks.tapclicksGet(
+      `/services/${serviceId}/data/data_views`
+    );
+    const dataViews = Array.isArray(dvResult.data) ? dvResult.data : [];
+    console.log(`Data views for service ${serviceId}:`, JSON.stringify(dataViews));
 
+    // Try each data view
     const results = [];
-    for (const svc of connected.slice(0, 10)) { // try first 10 connected services
+    const viewsToTry = dataViews.length > 0
+      ? dataViews.map(dv => dv.id || dv.data_view_id || dv)
+      : ['cgn']; // fallback to cgn
+
+    for (const view of viewsToTry.slice(0, 5)) {
       try {
-        const svcId  = svc.service_id || svc.id;
-        const data   = await tapclicks.tapclicksGet(
-          `/services/${svcId}/data/cgn?groupby=customer_id&fields=customer_id,ClickCount,ImpressionCount,CTR,AverageCPC,Cost&daterange=${daterange}&customer_id=${clientId}&page=0,5`
+        // First try without client filter to see raw data structure
+        const raw = await tapclicks.tapclicksGet(
+          `/services/${serviceId}/data/${view}?page=0,3&daterange=${daterange}`
         );
-        if (data.data && data.data.length > 0) {
-          results.push({ service: svc.name, service_id: svcId, data: data.data });
+        if (raw.data && raw.data.length > 0) {
+          results.push({
+            view,
+            sample_fields: Object.keys(raw.data[0]),
+            sample_row: raw.data[0],
+          });
         }
       } catch(e) {
-        // skip services that don't support this query
+        results.push({ view, error: e.message });
       }
     }
-    res.json({ client_id: clientId, daterange, results });
+
+    res.json({ client_id: clientId, service_id: serviceId, daterange, dataViews, results });
   } catch(err) {
     res.status(500).json({ error: err.message });
   }

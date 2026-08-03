@@ -20,7 +20,9 @@ function scoreMoMCPC(momPct) {
 }
 
 function scoreBudgetPacing(pct) {
-  if (pct === null || pct === undefined) return 80;
+  // No budget pacing data (e.g. organic-only clients with no paid spend) —
+  // leave it out of scoring entirely rather than defaulting to a placeholder.
+  if (pct === null || pct === undefined) return null;
   if (pct < 70 || pct > 115) return 35;
   if (pct < 80 || pct > 110) return 65;
   return 90;
@@ -35,7 +37,9 @@ function scoreMoMConversions(momPct) {
 }
 
 function scoreZeroConvDays(days) {
-  if (days === null || days === undefined) return 80;
+  // No zero-conversion-day tracking available (e.g. organic-only clients) —
+  // leave it out of scoring entirely rather than defaulting to a placeholder.
+  if (days === null || days === undefined) return null;
   if (days >= 8)  return 35;
   if (days >= 4)  return 65;
   return 88;

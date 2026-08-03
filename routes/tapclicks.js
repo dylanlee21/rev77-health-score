@@ -406,6 +406,12 @@ router.get('/client/:id/auto-score', async (req, res) => {
     const adsCur   = metrics.raw.googleAds?.current || {};
     const adsPrior = metrics.raw.googleAds?.prior   || {};
 
+    // TapClicks returns numeric fields as strings, sometimes with decimal
+    // padding (e.g. "414.000000000") — INTEGER columns reject that as-is,
+    // so round/parse everything before it touches the DB.
+    const toInt = v => (v === null || v === undefined || v === '') ? null : Math.round(Number(v));
+    const toDec = v => (v === null || v === undefined || v === '') ? null : Number(v);
+
     const flags = scoring.getFlags({
       cplMomPct:        metrics.cplMomPct,
       cpcMomPct:        metrics.cpcMomPct,
@@ -436,15 +442,15 @@ router.get('/client/:id/auto-score', async (req, res) => {
 
     const values = [
       clientId, period, periodStart, periodEnd,
-      campaignScore, compositeScore, status,
-      ga4Cur.SessionsCount ?? null,   ga4Prior.SessionsCount ?? null,   metrics.sessionsMomPct,
-      ga4Cur.New_usersCount ?? null,  ga4Prior.New_usersCount ?? null,  metrics.newUsersMomPct,
-      metrics.engagementRate,
-      ga4Cur.ConversionsCount ?? adsCur.ConversionsCount ?? null,
-      ga4Prior.ConversionsCount ?? adsPrior.ConversionsCount ?? null,
-      metrics.convMomPct,
-      metrics.cplMomPct, metrics.cpcMomPct,
-      brandedPos, localPos, flags,
+      toInt(campaignScore), toInt(compositeScore), status,
+      toInt(ga4Cur.SessionsCount),   toInt(ga4Prior.SessionsCount),   toDec(metrics.sessionsMomPct),
+      toInt(ga4Cur.New_usersCount),  toInt(ga4Prior.New_usersCount),  toDec(metrics.newUsersMomPct),
+      toDec(metrics.engagementRate),
+      toInt(ga4Cur.ConversionsCount ?? adsCur.ConversionsCount),
+      toInt(ga4Prior.ConversionsCount ?? adsPrior.ConversionsCount),
+      toDec(metrics.convMomPct),
+      toDec(metrics.cplMomPct), toDec(metrics.cpcMomPct),
+      toDec(brandedPos), toDec(localPos), flags,
     ];
 
     let saved;

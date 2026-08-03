@@ -173,11 +173,23 @@ async function testConnection() {
 
 // exports at bottom of file
 
-// ── Get all clients from TapClicks ────────────────────────────────────────────
-async function getClients(page = '0,100') {
-  const res = await tapclicksGet(`/clients?page=${page}&sort=company_name`);
-  const clients = Array.isArray(res.data) ? res.data : [res.data];
-  return clients.filter(c => c && c.reporting_status === 'active');
+// ── Get all clients from TapClicks (paginated) ───────────────────────────────
+async function getClients() {
+  let allClients = [];
+  let offset     = 0;
+  const pageSize = 100;
+
+  while (true) {
+    const res     = await tapclicksGet(`/clients?page=${offset},${pageSize}&sort=company_name`);
+    const batch   = Array.isArray(res.data) ? res.data : (res.data ? [res.data] : []);
+    if (batch.length === 0) break;
+    allClients = allClients.concat(batch);
+    console.log(`TapClicks: fetched ${allClients.length} clients so far...`);
+    if (batch.length < pageSize) break; // last page
+    offset += pageSize;
+  }
+
+  return allClients.filter(c => c && c.reporting_status === 'active');
 }
 
 // ── Get all channels (categories) ────────────────────────────────────────────

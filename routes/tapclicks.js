@@ -267,4 +267,71 @@ router.get('/client/:id/discover', async (req, res) => {
   }
 });
 
+// ── GET /api/tapclicks/client/:id/campaign-metrics ────────────────────────────
+// The full pipeline in one call: reads the client's cached TapClicks service
+// mapping (running /discover on the fly if it hasn't been cached yet), then
+// pulls normalized Campaign Performance metrics for the current scoring
+// period (most recently completed month vs the one before it) — ready to
+// hand straight to scoring.js's calcTier1Score().
+router.get('/client/:id/campaign-metrics', async (req, res) => {
+  try {
+    const clientId   = req.params.id;
+    const customerId = req.query.customer_id;
+    const daterange   = req.query.daterange || tapclicks.getCurrentScoringPeriod();
+
+    if (!customerId) {
+      return res.status(400).json({
+        error: 'customer_id query param is required (the TapClicks customer/client id, e.g. 122 for Tom\'s Mechanical)',
+      });
+    }
+
+    // 1. Check for a cached service mapping first
+    const clientRow = await pool.query(
+      `SELECT tapclicks_service_ids FROM clients WHERE id = $1`,
+      [clientId]
+    );
+
+    let connectedServices = clientRow.rows[0]?.tapclicks_service_ids || null;
+
+    // 2. No cache yet (or empty) — run discovery now and save it
+    if (!connectedServices || connectedServices.length === 0) {
+      const discovery = await tapclicks.discoverClientServices(customerId, CANDIDATE_SERVICE_IDS, daterange);
+      connectedServices = discovery
+        .filter(d => d.has_data)
+        .map(d => ({ service_id: d.service_id, view: d.matched_view }));
+
+      await pool.query(
+        `UPDATE clients SET tapclicks_service_ids = $1, tapclicks_discovered_at = NOW() WHERE id = $2`,
+        [JSON.stringify(connectedServices), clientId]
+      );
+    }
+
+    if (connectedServices.length === 0) {
+      return res.json({
+        client_id:   clientId,
+        customer_id: customerId,
+        daterange,
+        connected_services: [],
+        metrics: null,
+        note: 'No connected TapClicks services found for this client — nothing to score from TapClicks.',
+      });
+    }
+
+    // 3. Pull normalized metrics (current period vs prior month, handled
+    //    internally by getCampaignMetrics)
+    const metrics = await tapclicks.getCampaignMetrics(customerId, connectedServices, daterange);
+
+    res.json({
+      client_id:   clientId,
+      customer_id: customerId,
+      daterange,
+      prior_range: tapclicks.getPriorMonthRange(daterange),
+      connected_services: connectedServices,
+      metrics,
+    });
+  } catch(err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

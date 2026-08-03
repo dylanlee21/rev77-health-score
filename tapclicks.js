@@ -257,6 +257,151 @@ async function discoverClientServices(customerId, candidateServiceIds, daterange
   return results;
 }
 
+
+// ── Confirmed field maps (pulled live from TapClicks metadata) ────────────
+// GA4 fields verified against real Tom's Mechanical data on 2026-08-03.
+const GA4_FIELDS = {
+  sessions:       'SessionsCount',
+  newUsers:       'New_usersCount',
+  engagementRate: 'EngagementRate',
+  keyEvents:      'ConversionsCount', // GA4 "Key events" — TapClicks kept the old internal field name
+};
+
+// Google Ads field names below are NOT YET CONFIRMED against live data — no
+// sampled client (122) has a Google Ads connection. Before trusting cpl/cpc
+// math, run GET /api/tapclicks/metadata/137 and cross-check against a client
+// that DOES have Ads data (customer_id 56 or 117, confirmed via /discover).
+const GOOGLE_ADS_FIELDS = {
+  cost:        'CostCount',
+  clicks:      'ClicksCount',
+  impressions: 'ImpressionsCount',
+  conversions: 'ConversionsCount',
+};
+
+// ── Given a daterange string "YYYY-MM-DD|YYYY-MM-DD", return the same-shaped
+// range for the immediately prior calendar month (for MoM comparisons). ────
+function getPriorMonthRange(daterange) {
+  const [startStr] = daterange.split('|');
+  const start = new Date(startStr + 'T00:00:00Z');
+
+  const priorMonthLastDay  = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), 0));
+  const priorMonthFirstDay = new Date(Date.UTC(priorMonthLastDay.getUTCFullYear(), priorMonthLastDay.getUTCMonth(), 1));
+
+  const fmt = d => d.toISOString().slice(0, 10);
+  return `${fmt(priorMonthFirstDay)}|${fmt(priorMonthLastDay)}`;
+}
+
+// ── Get normalized campaign metrics for a client from whichever service(s) ──
+// actually have their data — paid Google Ads, organic GA4, or both. Returns
+// a metrics object shaped exactly for scoring.js's calcTier1Score(), with
+// any unavailable metric left as null (calcTier1Score already skips nulls
+// and renormalizes weights around what's present).
+//
+// `connectedServices` is the cached array from discoverClientServices() /
+// clients.tapclicks_service_ids, e.g. [{ service_id: 276, view: "cgn" }]
+async function getCampaignMetrics(customerId, connectedServices, currentRange) {
+  const priorRange = getPriorMonthRange(currentRange);
+  const adsService  = connectedServices.find(s => [34, 136, 137].includes(Number(s.service_id)));
+  const ga4Service  = connectedServices.find(s => Number(s.service_id) === 276);
+
+  const metrics = {
+    source:          [],   // which service(s) actually contributed data
+    cplMomPct:       null,
+    cpcMomPct:       null,
+    budgetPacingPct: null,
+    convMomPct:      null,
+    zeroConvDays:    null,
+    cvrMomPct:       null,
+    sessionsMomPct:  null,
+    newUsersMomPct:  null,
+    engagementRate:  null,
+    raw:             {},   // untouched API rows, kept for debugging/audit
+  };
+
+  // ── GA4 organic metrics ────────────────────────────────────────────────
+  if (ga4Service) {
+    try {
+      const fields = Object.values(GA4_FIELDS).join(',');
+      const [current, prior] = await Promise.all([
+        tapclicksGet(`/services/${ga4Service.service_id}/data/${ga4Service.view}?page=0,1&daterange=${currentRange}&customer_id=${customerId}&fields=customer_id,${fields}`),
+        tapclicksGet(`/services/${ga4Service.service_id}/data/${ga4Service.view}?page=0,1&daterange=${priorRange}&customer_id=${customerId}&fields=customer_id,${fields}`),
+      ]);
+
+      const curRow   = current.data?.[0];
+      const priorRow = prior.data?.[0];
+      metrics.raw.ga4 = { current: curRow || null, prior: priorRow || null };
+
+      if (curRow) {
+        metrics.source.push('ga4');
+        metrics.engagementRate = Number(curRow[GA4_FIELDS.engagementRate]);
+
+        if (priorRow) {
+          const curSessions   = Number(curRow[GA4_FIELDS.sessions]);
+          const priorSessions = Number(priorRow[GA4_FIELDS.sessions]);
+          const curNewUsers   = Number(curRow[GA4_FIELDS.newUsers]);
+          const priorNewUsers = Number(priorRow[GA4_FIELDS.newUsers]);
+          const curKeyEvents   = Number(curRow[GA4_FIELDS.keyEvents]);
+          const priorKeyEvents = Number(priorRow[GA4_FIELDS.keyEvents]);
+
+          if (priorSessions > 0) {
+            metrics.sessionsMomPct = +(((curSessions - priorSessions) / priorSessions) * 100).toFixed(1);
+          }
+          if (priorNewUsers > 0) {
+            metrics.newUsersMomPct = +(((curNewUsers - priorNewUsers) / priorNewUsers) * 100).toFixed(1);
+          }
+          // Only use GA4 key events for the conversions trend if there's no
+          // paid-ads conversion data to prefer instead.
+          if (!adsService && priorKeyEvents > 0) {
+            metrics.convMomPct = +(((curKeyEvents - priorKeyEvents) / priorKeyEvents) * 100).toFixed(1);
+          }
+        }
+      }
+    } catch (e) {
+      metrics.raw.ga4Error = e.message;
+    }
+  }
+
+  // ── Google Ads paid metrics (field names unconfirmed — see note above) ──
+  if (adsService) {
+    try {
+      const fields = Object.values(GOOGLE_ADS_FIELDS).join(',');
+      const [current, prior] = await Promise.all([
+        tapclicksGet(`/services/${adsService.service_id}/data/${adsService.view}?page=0,1&daterange=${currentRange}&customer_id=${customerId}&fields=customer_id,${fields}`),
+        tapclicksGet(`/services/${adsService.service_id}/data/${adsService.view}?page=0,1&daterange=${priorRange}&customer_id=${customerId}&fields=customer_id,${fields}`),
+      ]);
+
+      const curRow   = current.data?.[0];
+      const priorRow = prior.data?.[0];
+      metrics.raw.googleAds = { current: curRow || null, prior: priorRow || null };
+
+      if (curRow) {
+        metrics.source.push('google_ads');
+
+        if (priorRow) {
+          const curCost          = Number(curRow[GOOGLE_ADS_FIELDS.cost]);
+          const priorCost        = Number(priorRow[GOOGLE_ADS_FIELDS.cost]);
+          const curConversions   = Number(curRow[GOOGLE_ADS_FIELDS.conversions]);
+          const priorConversions = Number(priorRow[GOOGLE_ADS_FIELDS.conversions]);
+
+          const curCpl   = curConversions > 0   ? curCost / curConversions     : null;
+          const priorCpl = priorConversions > 0 ? priorCost / priorConversions : null;
+
+          if (curCpl !== null && priorCpl) {
+            metrics.cplMomPct = +(((curCpl - priorCpl) / priorCpl) * 100).toFixed(1);
+          }
+          if (priorConversions > 0) {
+            metrics.convMomPct = +(((curConversions - priorConversions) / priorConversions) * 100).toFixed(1);
+          }
+        }
+      }
+    } catch (e) {
+      metrics.raw.googleAdsError = e.message;
+    }
+  }
+
+  return metrics;
+}
+
 module.exports = {
   getAccessToken,
   tapclicksGet,
@@ -267,4 +412,6 @@ module.exports = {
   getChannels,
   findClient,
   discoverClientServices,
+  getCampaignMetrics,
+  getPriorMonthRange,
 };

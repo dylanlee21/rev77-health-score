@@ -189,7 +189,7 @@ async function getClients() {
     offset += pageSize;
   }
 
-  return allClients.filter(c => c && c.reporting_status === 'active');
+  return allClients; // return all statuses so we can see Tom's Mechanical
 }
 
 // ── Get all channels (categories) ────────────────────────────────────────────

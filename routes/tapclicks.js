@@ -3,6 +3,7 @@ const express   = require('express');
 const router    = express.Router();
 const { Pool }  = require('pg');
 const tapclicks = require('../tapclicks');
+const scoring   = require('../scoring');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -328,6 +329,168 @@ router.get('/client/:id/campaign-metrics', async (req, res) => {
       prior_range: tapclicks.getPriorMonthRange(daterange),
       connected_services: connectedServices,
       metrics,
+    });
+  } catch(err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── GET /api/tapclicks/client/:id/auto-score ──────────────────────────────────
+// The full automation: pulls TapClicks metrics for the current scoring
+// period, runs them through scoring.js exactly like the manual /api/scores
+// entry point does, and saves the result to the scores table — so it shows
+// up on the dashboard's Campaign Performance tab automatically, with the
+// raw current/prior numbers visible for manual sanity-checking.
+router.get('/client/:id/auto-score', async (req, res) => {
+  try {
+    const clientId   = req.params.id;
+    const customerId = req.query.customer_id;
+    const daterange   = req.query.daterange || tapclicks.getCurrentScoringPeriod();
+
+    // Keyword rankings aren't sourced from TapClicks (no SEO rank tracker
+    // connected yet) — pass them in manually via query params if you have
+    // them, otherwise the campaign score is Tier 1 only, same as it already
+    // gracefully handles when keywords are unknown.
+    const brandedPos = req.query.branded_keyword_pos ? Number(req.query.branded_keyword_pos) : null;
+    const localPos    = req.query.local_keyword_pos   ? Number(req.query.local_keyword_pos)   : null;
+
+    if (!customerId) {
+      return res.status(400).json({
+        error: 'customer_id query param is required (the TapClicks customer/client id)',
+      });
+    }
+
+    // 1. Get cached service mapping, discover if missing (same as /campaign-metrics)
+    const clientRow = await pool.query(
+      `SELECT tapclicks_service_ids FROM clients WHERE id = $1`, [clientId]
+    );
+    let connectedServices = clientRow.rows[0]?.tapclicks_service_ids || null;
+
+    if (!connectedServices || connectedServices.length === 0) {
+      const discovery = await tapclicks.discoverClientServices(customerId, CANDIDATE_SERVICE_IDS, daterange);
+      connectedServices = discovery
+        .filter(d => d.has_data)
+        .map(d => ({ service_id: d.service_id, view: d.matched_view }));
+
+      await pool.query(
+        `UPDATE clients SET tapclicks_service_ids = $1, tapclicks_discovered_at = NOW() WHERE id = $2`,
+        [JSON.stringify(connectedServices), clientId]
+      );
+    }
+
+    if (connectedServices.length === 0) {
+      return res.json({
+        client_id: clientId, customer_id: customerId, daterange,
+        note: 'No connected TapClicks services found for this client — nothing to score.',
+      });
+    }
+
+    // 2. Pull normalized metrics (current period vs prior month)
+    const metrics = await tapclicks.getCampaignMetrics(customerId, connectedServices, daterange);
+
+    // 3. Score exactly like the manual entry point does
+    const tier1         = scoring.calcTier1Score(metrics);
+    const keywords       = scoring.calcKeywordScore(brandedPos, localPos);
+    const campaignScore = scoring.calcCampaignScore(tier1.score, keywords.score);
+
+    // 4. Period bookkeeping
+    const [periodStart, periodEnd] = daterange.split('|');
+    const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const period = `${monthNames[new Date(periodStart + 'T00:00:00Z').getUTCMonth()]} ${periodStart.slice(0, 4)}`;
+
+    // 5. Raw display values, pulled straight from what TapClicks returned —
+    //    these are what let you manually sanity-check the numbers on the
+    //    Campaign Performance tab.
+    const ga4Cur   = metrics.raw.ga4?.current       || {};
+    const ga4Prior = metrics.raw.ga4?.prior         || {};
+    const adsCur   = metrics.raw.googleAds?.current || {};
+    const adsPrior = metrics.raw.googleAds?.prior   || {};
+
+    const flags = scoring.getFlags({
+      cplMomPct:        metrics.cplMomPct,
+      cpcMomPct:        metrics.cpcMomPct,
+      convMomPct:       metrics.convMomPct,
+      zeroConvDays:     metrics.zeroConvDays,
+      localKeywordPos:  localPos,
+      riskLanguage:     false,
+      daysSinceContact: 0,
+    }).map(f => f.msg).join(' | ');
+
+    // 6. Preserve whatever delivery/communication/risk scores already exist
+    //    for this client+period (this endpoint only owns Campaign
+    //    Performance) and recompute the composite around the new number.
+    const existing = await pool.query(
+      `SELECT id, delivery_score, communication_score, risk_score
+       FROM scores WHERE client_id = $1 AND period = $2`,
+      [clientId, period]
+    );
+
+    const deliveryScore      = existing.rows[0]?.delivery_score      ?? null;
+    const communicationScore = existing.rows[0]?.communication_score ?? null;
+    const riskScore          = existing.rows[0]?.risk_score          ?? null;
+
+    const compositeScore = scoring.calcCompositeScore({
+      campaignScore, deliveryScore, communicationScore, riskScore,
+    });
+    const status = scoring.getStatus(compositeScore);
+
+    const values = [
+      clientId, period, periodStart, periodEnd,
+      campaignScore, compositeScore, status,
+      ga4Cur.SessionsCount ?? null,   ga4Prior.SessionsCount ?? null,   metrics.sessionsMomPct,
+      ga4Cur.New_usersCount ?? null,  ga4Prior.New_usersCount ?? null,  metrics.newUsersMomPct,
+      metrics.engagementRate,
+      ga4Cur.ConversionsCount ?? adsCur.ConversionsCount ?? null,
+      ga4Prior.ConversionsCount ?? adsPrior.ConversionsCount ?? null,
+      metrics.convMomPct,
+      metrics.cplMomPct, metrics.cpcMomPct,
+      brandedPos, localPos, flags,
+    ];
+
+    let saved;
+    if (existing.rows.length > 0) {
+      const upd = await pool.query(`
+        UPDATE scores SET
+          period_start=$3, period_end=$4,
+          campaign_score=$5, composite_score=$6, status=$7,
+          sessions_this=$8, sessions_prior=$9, sessions_mom_pct=$10,
+          new_users_this=$11, new_users_prior=$12, new_users_mom_pct=$13,
+          engagement_rate=$14,
+          key_events_this=$15, key_events_prior=$16, key_events_mom_pct=$17,
+          cpl_mom_pct=$18, cpc_mom_pct=$19,
+          branded_keyword_pos=$20, local_keyword_pos=$21,
+          flags=$22, updated_at=NOW()
+        WHERE client_id=$1 AND period=$2
+        RETURNING *`, values);
+      saved = upd.rows[0];
+    } else {
+      const ins = await pool.query(`
+        INSERT INTO scores (
+          client_id, period, period_start, period_end,
+          campaign_score, composite_score, status,
+          sessions_this, sessions_prior, sessions_mom_pct,
+          new_users_this, new_users_prior, new_users_mom_pct,
+          engagement_rate,
+          key_events_this, key_events_prior, key_events_mom_pct,
+          cpl_mom_pct, cpc_mom_pct,
+          branded_keyword_pos, local_keyword_pos,
+          flags
+        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)
+        RETURNING *`, values);
+      saved = ins.rows[0];
+    }
+
+    res.json({
+      client_id: clientId,
+      customer_id: customerId,
+      daterange,
+      period,
+      connected_services: connectedServices,
+      tier1_breakdown: tier1.breakdown,
+      campaign_score: campaignScore,
+      composite_score: compositeScore,
+      status,
+      saved_score_row: saved,
     });
   } catch(err) {
     res.status(500).json({ error: err.message });

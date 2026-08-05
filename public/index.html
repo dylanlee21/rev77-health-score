@@ -459,9 +459,9 @@ function buildCampaignTab(s, benchmark, client) {
     ['MoM Conversions',      s.conversions_this,            s.conversions_prior,             s.conv_mom_pct,     'T1',  calcScore('convMoM',s.conv_mom_pct), '20%'],
     ['Zero Conv Days',       `${s.zero_conv_days??'—'} days`,'—',                           null,               'T1',  calcScore('zeroConv',s.zero_conv_days),'10%'],
     ['MoM Conv Rate',        fmt(s.conv_rate_this,'','%'),  fmt(s.conv_rate_prior,'','%'),   s.cvr_mom_pct,      'T1',  calcScore('cvrMoM',s.cvr_mom_pct),   '10%'],
-    ['MoM Sessions',         s.sessions_this?.toLocaleString(),s.sessions_prior?.toLocaleString(),s.sessions_mom_pct,'T1',calcScore('sessions',s.sessions_mom_pct),'10%'],
-    ['MoM New Users',        s.new_users_this?.toLocaleString(),s.new_users_prior?.toLocaleString(),s.new_users_mom_pct,'T1',calcScore('newUsers',s.new_users_mom_pct),'10%'],
-    ['Engagement Rate',      fmt(s.engagement_rate,'','%'), '—',                            null,               'T1',  calcScore('engRate',s.engagement_rate),'10%'],
+    ['MoM Sessions (All Channels)',         s.sessions_this?.toLocaleString(),s.sessions_prior?.toLocaleString(),s.sessions_mom_pct,'T1',calcScore('sessions',s.sessions_mom_pct),'10%'],
+    ['MoM New Users (All Channels)',        s.new_users_this?.toLocaleString(),s.new_users_prior?.toLocaleString(),s.new_users_mom_pct,'T1',calcScore('newUsers',s.new_users_mom_pct),'10%'],
+    ['Engagement Rate (All Channels)',      fmt(s.engagement_rate,'','%'), '—',                            null,               'T1',  calcScore('engRate',s.engagement_rate),'10%'],
     ['Branded Keywords',     `Pos ${s.branded_keyword_pos??'—'}`, '—',                      null,               'T1*', calcScore('branded',s.branded_keyword_pos),'KW'],
     ['Local Keywords',       `Pos ${s.local_keyword_pos??'—'}`,   '—',                      null,               'T1*', calcScore('local',s.local_keyword_pos),  'KW'],
   ];
@@ -497,6 +497,9 @@ function buildCampaignTab(s, benchmark, client) {
     </div>
 
     <div class="section-head" style="margin-top:1.25rem">Raw metrics</div>
+    <div style="font-size:0.8rem;color:#888;margin-bottom:0.5rem;font-style:italic">
+      Sessions / New Users / Key Events / Engagement Rate reflect GA4 traffic across ALL channels (organic, paid, direct, referral, social, email) — not organic search alone. TapClicks' own "Organic Performance" widgets use a different, narrower slice and will not match these numbers.
+    </div>
     <div class="metrics-grid">
       ${metBox('Impressions',s.impressions_this?.toLocaleString(),null,null)}
       ${metBox('Clicks',s.clicks_this?.toLocaleString(),null,null)}
@@ -505,10 +508,10 @@ function buildCampaignTab(s, benchmark, client) {
       ${metBox('CPC',fmt(s.cpc_this,'$'),fmt(s.cpc_prior,'$'),s.cpc_mom_pct)}
       ${metBox('Conversions',s.conversions_this,s.conversions_prior,s.conv_mom_pct)}
       ${metBox('Conv Rate',fmt(s.conv_rate_this,'','%'),fmt(s.conv_rate_prior,'','%'),s.cvr_mom_pct)}
-      ${metBox('Sessions',s.sessions_this?.toLocaleString(),s.sessions_prior?.toLocaleString(),s.sessions_mom_pct)}
-      ${metBox('New Users',s.new_users_this?.toLocaleString(),s.new_users_prior?.toLocaleString(),s.new_users_mom_pct)}
-      ${metBox('Key Events',s.key_events_this,s.key_events_prior,s.key_events_mom_pct)}
-      ${metBox('Engagement Rate',fmt(s.engagement_rate,'','%'),null,null)}
+      ${metBox('Sessions (All Channels)',s.sessions_this?.toLocaleString(),s.sessions_prior?.toLocaleString(),s.sessions_mom_pct)}
+      ${metBox('New Users (All Channels)',s.new_users_this?.toLocaleString(),s.new_users_prior?.toLocaleString(),s.new_users_mom_pct)}
+      ${metBox('Key Events (All Channels)',s.key_events_this,s.key_events_prior,s.key_events_mom_pct)}
+      ${metBox('Engagement Rate (All Channels)',fmt(s.engagement_rate,'','%'),null,null)}
       ${metBox('Ad Spend',fmt(s.spend_this,'$','',0),null,null)}
     </div>
 
